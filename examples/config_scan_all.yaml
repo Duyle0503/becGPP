@@ -1,0 +1,6 @@
+# One-button paper dataset: validation, showcase singles, sweeps, convergence, benchmark.
+# Use scan_profile=quick first to check the pipeline, then full for the real data.
+mode: scan_all
+scan_profile: full        # "quick" (fast dry run) | "full" (paper data)
+show_inline: false
+zip_output: true

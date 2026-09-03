@@ -1,0 +1,23 @@
+{
+  "code_version": "becGPP_1.0",
+  "device": "cuda",
+  "profile": "full",
+  "started": "2026-08-31 08:56:10",
+  "sections": [
+    "singles",
+    "sweeps",
+    "convergence",
+    "benchmark"
+  ],
+  "validation": {
+    "passed": true,
+    "mg": 0.0003500445469956754,
+    "mp": 0.0006821485131945154,
+    "ml": 3.552713678800501e-15,
+    "mtf": 0.0,
+    "m3": 0.001988548374352498
+  },
+  "finished": "2026-08-31 11:08:09",
+  "walltime_s": 7918.859773874283,
+  "n_singles": 8
+}

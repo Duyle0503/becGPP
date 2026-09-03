@@ -1,0 +1,13 @@
+# Standard repulsive harmonic BEC in 2D -> inverted-parabola Thomas-Fermi.
+mode: single
+dimension: "2D"
+s: 2
+Omega: 0.0
+beta2: 200
+beta3: 0
+G_C: 0
+kernel: none
+L: 10
+Ngrid: 256
+seed: tf
+zip_output: false

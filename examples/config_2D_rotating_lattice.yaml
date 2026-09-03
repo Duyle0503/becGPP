@@ -1,0 +1,16 @@
+# Rotating harmonic BEC in 2D -> Abrikosov triangular vortex lattice.
+# Rotating cases need the vortex-lattice branch: use seed=triangular + nseeds>=3.
+mode: single
+dimension: "2D"
+s: 2
+Omega: 0.9
+beta2: 200
+beta3: 0
+G_C: 0
+kernel: none
+L: 12
+Ngrid: 384
+seed: triangular
+nseeds: 3
+want_lll: true
+zip_output: false

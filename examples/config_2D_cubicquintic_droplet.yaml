@@ -1,0 +1,13 @@
+# Self-bound cubic-quintic droplet in 2D -> flat-top Thomas-Fermi rho0 = -3 b2 / (4 b3).
+mode: single
+dimension: "2D"
+s: 2
+Omega: 1.0
+beta2: -250
+beta3: 250
+G_C: 0
+kernel: none
+L: 6
+Ngrid: 384
+seed: tf
+zip_output: false

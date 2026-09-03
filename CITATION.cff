@@ -1,0 +1,27 @@
+cff-version: 1.2.0
+message: "If you use becGPP in your research, please cite both the software and the accompanying paper."
+title: "becGPP: a GPU-accelerated spectral ground-state solver for trapped, rotating and self-gravitating Bose-Einstein condensates"
+version: 1.0.0
+date-released: 2026-09-03
+license: MIT
+authors:
+  - given-names: Duy
+    email: lebaoduy0503@gmail.com
+    # affiliation: TODO
+repository-code: "https://github.com/Duyle0503/becGPP"
+keywords:
+  - Bose-Einstein condensate
+  - Gross-Pitaevskii-Poisson
+  - vortex lattice
+  - self-gravity
+  - Thomas-Fermi
+  - GPU
+preferred-citation:
+  type: article
+  title: "becGPP: a GPU-accelerated spectral ground-state solver for trapped, rotating and self-gravitating Bose-Einstein condensates in two and three dimensions"
+  authors:
+    - given-names: Duy
+      email: lebaoduy0503@gmail.com
+  journal: "Computer Physics Communications"
+  year: 2026
+  # volume/pages/doi: TODO on acceptance

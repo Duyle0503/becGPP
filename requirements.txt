@@ -1,0 +1,7 @@
+# Runtime dependencies (pinned to lower bounds; newer versions generally work).
+torch>=1.12
+numpy>=1.21
+matplotlib>=3.5
+
+# Optional: YAML config files (JSON configs work without this).
+PyYAML>=5.4

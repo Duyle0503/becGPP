@@ -1,0 +1,27 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.pytest_cache/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# becGPP run outputs
+becgpp_out/
+/kaggle/
+*.pt
+becgpp_results*.zip
+
+# Keep the curated sample outputs that ship with the repo
+!data/sample_output/**
+
+# Env / editor
+.venv/
+venv/
+.env
+.vscode/
+.idea/
+.DS_Store

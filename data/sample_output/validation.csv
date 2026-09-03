@@ -1,0 +1,17 @@
+case,quantity,rel_error,test
+a=0.5,Egrav,0.0003500445469956754,2D_gauss
+a=0.5,phi0,0.0006821485131945154,2D_gauss
+a=1.0,Egrav,9.070393694063078e-05,2D_gauss
+a=1.0,phi0,0.0001785009110110615,2D_gauss
+a=2.0,Egrav,2.3364300126404562e-05,2D_gauss
+a=2.0,phi0,4.602557936232274e-05,2D_gauss
+m=0,ids,1.311334958355127e-19,2D_LLL
+m=1,ids,0.0,2D_LLL
+m=10,ids,0.0,2D_LLL
+m=30,ids,3.552713678800501e-15,2D_LLL
+b2=-0.5,rho0_mu,0.0,2D_flat_tf
+b2=-1.5,rho0_mu,0.0,2D_flat_tf
+b2=-0.5,rho0_mu,0.0,3D_flat_tf
+b2=-1.5,rho0_mu,0.0,3D_flat_tf
+sig=1.0,phi0,0.001988548374352498,3D_gauss
+sig=1.5,phi0,0.0008919082715037964,3D_gauss
