@@ -7,6 +7,7 @@ import time
 import shutil
 
 import torch
+import numpy as np
 import matplotlib.pyplot as plt
 
 from . import paths
@@ -102,13 +103,41 @@ def mode_validate(cfg):
         print(f"    sigma={sig}: phi0={phi0:.5f} exact={phi0_ex:.5f} rel={e:.2e}")
         rows.append(dict(test="3D_gauss", case=f"sig={sig}", quantity="phi0", rel_error=e))
 
+    # ---- free-space kernel CONVERGENCE ORDER (2D & 3D) against the analytic phi(0) ----
+    # Independent of the solver: fit p in |phi0(dx)-phi0_exact| ~ dx^p on a fixed Gaussian.
+    # The Gauss-Legendre cell-averaged kernels are second order in both dimensions.
+    print("[order] free-space kernel convergence order (phi(0) of a Gaussian)")
+    kernel_orders = {}
+    for ndim, Ns, sig, L in ((2, (192, 256, 384, 512), 1.0, 10.0),
+                             (3, (64, 96, 128, 160), 1.0, 8.0)):
+        dxs, errs = [], []
+        ex = (-math.sqrt(math.pi) / sig) if ndim == 2 else (-2.0 / (math.sqrt(math.pi) * sig))
+        for Ni in Ns:
+            Gk = make_grid(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=2,
+                                kernel="newton", G_C=1.0, L=L, Ngrid=int(Ni)))
+            psi = torch.exp(-Gk["R2"] / (2 * sig * sig)).to(torch.complex128)
+            psi = psi / norm_of(psi, Gk)
+            phi = long_range_phi(psi.abs()**2, Gk, 1.0)
+            c = Gk["N"] // 2
+            p0 = (phi[c, c].item() if ndim == 2 else phi[c, c, c].item())
+            dxs.append(Gk["dx"])
+            errs.append(abs(p0 - ex) / abs(ex))
+        order = float(np.polyfit(np.log(dxs), np.log(errs), 1)[0])
+        kernel_orders[f"{ndim}D"] = order
+        print(f"    {ndim}D: fitted order = {order:.2f}   errs={['%.2e' % e for e in errs]}")
+        for dxi, ei in zip(dxs, errs):
+            rows.append(dict(test=f"{ndim}D_kernel_order", case=f"dx={dxi:.4f}",
+                             quantity="phi0_relerr", rel_error=ei, order=order))
+
     write_csv(os.path.join(paths.BASE, "validation.csv"), rows)
     passed = (mg < 5e-3 and mp < 5e-3 and ml < 1e-4 and mtf < 1e-2 and m3 < 5e-2)
+    order_ok = all(o > 1.7 for o in kernel_orders.values())
     print("-" * 70)
     print(f"[validate] 2D-Coulomb Eg={mg:.2e} phi0={mp:.2e} | LLL={ml:.2e} | flatTF={mtf:.2e} | "
-          f"3D-phi0={m3:.2e} | PASS={passed}")
+          f"3D-phi0={m3:.2e} | kernel_order={kernel_orders} | PASS={passed and order_ok}")
     print("[validate] thresholds relax on coarse N; use validate_N=512 for publication numbers")
-    return dict(passed=passed, mg=mg, mp=mp, ml=ml, mtf=mtf, m3=m3)
+    return dict(passed=passed and order_ok, mg=mg, mp=mp, ml=ml, mtf=mtf, m3=m3,
+                kernel_orders=kernel_orders)
 
 
 # =============================================================================
@@ -544,7 +573,7 @@ def mode_scan_all(cfg):
                       ([192, 256] if quick else [192, 256, 384, 512]), "2D_gravitylike", conv, scan_dir)
     _scan_convergence(base, dict(dimension="3D", s=2, Omega=0.0, beta2=100, G_C=20,
                                  kernel="newton", L=8),
-                      ([64, 80] if quick else [80, 96, 128]), "3D_newton", conv, scan_dir)
+                      ([64, 80] if quick else [80, 96, 128, 160, 192]), "3D_newton", conv, scan_dir)
     manifest["sections"].append("convergence")
 
     # ---- E. GPU benchmark (throughput vs grid size) ----

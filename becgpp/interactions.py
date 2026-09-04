@@ -42,11 +42,15 @@ def _build_kernel_fft(G):
                 for v, wv in zip(nodes, wts):
                     ker += 0.25 * wu * wv * (-0.5) * torch.log((DX + 0.5 * dx * u)**2 + (DY + 0.5 * dx * v)**2)
         Kf = torch.fft.fftn(ker.to(torch.complex128))
-    else:                                                 # 3D Newton 1/r
+    else:                                                 # 3D Newton 1/r, GL cell-average
         DX, DY, DZ = torch.meshgrid(dj, dj, dj, indexing="ij")
-        r = torch.sqrt(DX**2 + DY**2 + DZ**2)
-        ker = torch.where(r > 0, 1.0 / r, torch.zeros_like(r))
-        ker[0, 0, 0] = 2.380077 / dx                      # <1/r> over a cubic cell
+        ker = torch.zeros_like(DX)
+        for u, wu in zip(nodes, wts):
+            for v, wv in zip(nodes, wts):
+                for w, ww in zip(nodes, wts):
+                    ker += (wu * wv * ww / 8.0) / torch.sqrt(
+                        (DX + 0.5 * dx * u)**2 + (DY + 0.5 * dx * v)**2 + (DZ + 0.5 * dx * w)**2)
+        ker[0, 0, 0] = 2.380077 / dx                      # analytic <1/r> over the self cell
         Kf = torch.fft.fftn(ker.to(torch.complex128))
     _KERNEL_CACHE[key] = (Kf, M)
     return Kf, M
