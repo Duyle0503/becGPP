@@ -175,6 +175,10 @@ def mode_single(cfg):
     show_density(psi, G, cfg, title=f"{cfg['dimension']} density  "
                  f"(beta2={cfg['beta2']}, G_C={cfg['G_C']}, Omega={cfg['Omega']})")
     write_csv(os.path.join(paths.BASE, "single_summary.csv"), [diag])
+    # reusable machine-readable record: full config + every diagnostic, one file per run.
+    with open(os.path.join(paths.BASE, f"{rid}.json"), "w") as f:
+        json.dump(dict(code_version=CODE_VERSION, device=DEV, cfg=cfg, diagnostics=diag),
+                  f, indent=2, default=str)
     print("-" * 70)
     print(f"[single] {cfg['dimension']} s={cfg['s']} Omega={cfg['Omega']} "
           f"beta2={cfg['beta2']} beta3={cfg['beta3']} G_C={cfg['G_C']} kernel={G['kernel']}")
@@ -651,8 +655,13 @@ def run(cfg):
     fn = DISPATCH.get(mode)
     if fn is None:
         raise ValueError(f"unknown mode {mode!r}; choose {sorted(DISPATCH)}")
+    kkind = resolve_kernel(cfg)[0]
+    requested = str(cfg.get("kernel", "auto")).lower()
+    if requested in ("newton", "log") and kkind == "none" and abs(float(cfg.get("G_C", 0.0))) <= 1e-15:
+        print(f"[warn] kernel={requested!r} is set but G_C=0, so the long-range term is OFF "
+              f"(reported kernel='none'). Set G_C>0 to activate it, e.g. G_C=20.")
     print(f"becGPP {CODE_VERSION} | device={DEV} | mode={mode} | "
-          f"dim={cfg.get('dimension')} kernel={resolve_kernel(cfg)[0]}")
+          f"dim={cfg.get('dimension')} kernel={kkind}")
     result = fn(cfg)
     if cfg.get("zip_output", False):
         try:

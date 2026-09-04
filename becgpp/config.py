@@ -30,8 +30,8 @@ CFG_DEFAULTS = dict(
 
     # ---- solver ----
     maxit        = 60000,
-    res_tol      = 1e-4,           # KKT residual ||(H-mu)psi|| / max(1,|mu|)
-    energy_tol   = 1e-9,
+    res_tol      = 1e-4,           # KKT residual ||(H-mu)psi|| / max(1,|mu|); alias: res=
+    energy_tol   = 1e-9,           # windowed relative-energy stop; alias: etol=
     step         = 0.5,
     step_max     = 2.0,
     precond_shift = 1.0,
@@ -50,6 +50,10 @@ CFG_DEFAULTS = dict(
     # ---- diagnostics ----
     want_vortices = True,          # 2D / quasi2D only
     want_lll      = True,          # LLL weight; meaningful at Omega=1, 2D
+    tf_cache      = True,          # cache the Thomas-Fermi extraction per configuration
+
+    # ---- validate mode ----
+    validate_N    = 256,           # grid used by the analytic gate (use 512 for publication numbers)
 
     # ---- sweep mode: vary ANY numeric CFG key over a list ----
     sweep_param  = "G_C",
@@ -70,8 +74,27 @@ CFG_DEFAULTS = dict(
 )
 
 
+# short, user-facing aliases -> canonical CFG keys
+_ALIASES = dict(res="res_tol", etol="energy_tol", N="Ngrid", dim="dimension")
+
+
 def default_cfg(**overrides):
-    """Return a fresh copy of the default configuration, with ``overrides`` applied."""
+    """Return a fresh copy of the default configuration, with ``overrides`` applied.
+
+    A few convenience aliases are accepted and mapped to their canonical keys, so
+    the residual tolerance can be set directly as ``res=`` (equivalently
+    ``res_tol=``); also ``etol`` -> ``energy_tol``, ``N`` -> ``Ngrid``,
+    ``dim`` -> ``dimension``. Passing both an alias and its canonical key is an error.
+    """
     cfg = dict(CFG_DEFAULTS)
+    for alias, canonical in _ALIASES.items():
+        if alias in overrides:
+            if canonical in overrides:
+                raise ValueError(f"pass only one of {alias!r} or {canonical!r}")
+            overrides[canonical] = overrides.pop(alias)
+    unknown = set(overrides) - set(CFG_DEFAULTS)
+    if unknown:
+        raise ValueError(f"unknown config key(s): {sorted(unknown)}; "
+                         f"see becgpp.config.CFG_DEFAULTS for valid keys")
     cfg.update(overrides)
     return cfg
