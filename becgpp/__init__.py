@@ -30,7 +30,7 @@ from .diagnostics import diagnostics
 from .units import physical_scales, sim_params_from_physical, outputs_to_physical
 from .modes import (run, DISPATCH, zip_results,
                     mode_validate, mode_smoke, mode_single, mode_tf_only,
-                    mode_sweep, mode_convergence, mode_scan_all, mode_refig)
+                    mode_sweep, mode_convergence)
 
 __version__ = "1.0.0"
 
@@ -44,5 +44,5 @@ __all__ = [
     "physical_scales", "sim_params_from_physical", "outputs_to_physical",
     "run", "DISPATCH", "zip_results",
     "mode_validate", "mode_smoke", "mode_single", "mode_tf_only",
-    "mode_sweep", "mode_convergence", "mode_scan_all", "mode_refig",
+    "mode_sweep", "mode_convergence",
 ]

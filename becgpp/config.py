@@ -8,8 +8,7 @@ configuration by copying it and overriding the keys you need, e.g.::
 """
 
 CFG_DEFAULTS = dict(
-    mode         = "smoke",        # validate | smoke | single | tf_only | sweep | convergence | scan_all | refig
-    scan_profile = "full",         # scan_all: "full" (paper data) | "quick" (fast dry run)
+    mode         = "smoke",        # smoke | validate | single | tf_only | sweep | convergence
 
     # ---- geometry ----
     dimension    = "2D",           # "2D" | "3D" | "quasi2D"

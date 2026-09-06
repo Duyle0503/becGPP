@@ -135,12 +135,15 @@ print("E:", rec["diagnostics"]["E"], " R90:", rec["diagnostics"]["R90"],
 run(default_cfg(mode="smoke", dimension="3D"))
 
 
-# ---- Cell 14 -- scan_all: reproduce the entire paper batch ---------------
-# setup = mode + scan_profile only; it fixes all its own physics internally
-# (validation + 8 showcase singles + 4 sweeps + convergence + GPU benchmark).
-#   scan_profile="quick" -> small grids / fewer points, a few minutes (dry run)
-#   scan_profile="full"  -> paper-grade data, ~2 hours on one GPU
-# Writes CSVs, all figures, and out/scan/scan_manifest.json (code version,
-# device, timings). Then zip out/ and download it.
-run(default_cfg(mode="scan_all", scan_profile="quick"))
-# from becgpp import zip_results; zip_results()   # -> becgpp_results.zip
+# ---- Cell 14 -- convergence: grid/box/padding study at fixed physics -----
+# Refines the resolution while holding the physics fixed and reports how E, R90
+# and the virial residual settle. This is the general accuracy tool -- you choose
+# the case and the grids; nothing is hard-coded.
+run(default_cfg(
+    mode="convergence", dimension="3D", s=2, Omega=0.0,
+    beta2=100, beta3=0, G_C=20, kernel="newton", L=8,
+    conv_Ngrids=[80, 96, 128], conv_box_factors=[1.0], conv_pads=[2]))
+
+# The six run modes are: single, sweep, convergence, tf_only, validate, smoke.
+# Build any figure set you need by scripting single/sweep yourself -- e.g. loop
+# over your own case list and call run(default_cfg(mode="single", ...)) for each.

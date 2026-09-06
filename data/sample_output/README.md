@@ -1,8 +1,9 @@
 # Sample output
 
-A representative subset of the output of `becgpp --mode scan_all --scan_profile full`
-(one full production run on a single GPU, code version `becGPP_1.0`). It is here so
-that a new user can see the exact I/O format without running the code first.
+A representative subset of a full production run on a single GPU (code version
+`becGPP_1.0`), produced by driving the `single`, `sweep`, `convergence` and
+`validate` modes over the showcase configurations. It is here so that a new user
+can see the exact I/O format without running the code first.
 
 ```
 validation.csv                     analytic gate: relative errors (Coulomb, LLL, flat-top TF)

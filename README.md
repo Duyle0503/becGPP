@@ -68,15 +68,12 @@ becgpp --mode single --dimension 3D --G_C 20 --kernel newton --outdir ./out
 python -m becgpp --config examples/config_2D_harmonic.yaml
 ```
 
-**One-button paper data**
+**Build a dataset**
 
-```bash
-becgpp --mode scan_all --scan_profile full --outdir ./out
-```
-
-runs validation, eight showcase singles, four parameter sweeps, the grid
-convergence study and the GPU benchmark, writing CSVs and publication-style
-figures. Use `--scan_profile quick` for a fast dry run first.
+Assemble a figure set by scripting `single` and `sweep` over your own list of
+configurations — nothing is hard-coded. For example, to reproduce the showcase
+states, loop over their configs and call `run(default_cfg(mode="single", ...))`
+for each.
 
 ## Modes
 
@@ -86,10 +83,11 @@ figures. Use `--scan_profile quick` for a fast dry run first.
 | `smoke`       | validate + a tiny run + TF extraction (fast end-to-end check) |
 | `single`      | one ground state, with figures, TF overlay and a summary row |
 | `tf_only`     | Thomas–Fermi reference alone (no solve) |
-| `sweep`       | vary any numeric parameter over a list |
+| `sweep`       | vary any numeric parameter over a list, rest fixed |
 | `convergence` | refine grid N / box L / padding at fixed physics |
-| `scan_all`    | the entire paper dataset in one run |
-| `refig`       | re-render all figures from saved checkpoints (no re-solve) |
+
+Set the residual tolerance yourself with `res=` (alias of `res_tol`); other
+aliases are `etol=`, `N=`, `dim=`.
 
 ## Output
 
@@ -98,9 +96,9 @@ Every run writes to the output directory (`GPP_OUTDIR`, else `--outdir`, else
 
 - CSV rows with the full diagnostic set — `E, mu, Lz, Nv, w_LLL, oblateness,
   R50/R90/R99, virial_rel, resid_rel, tf_kind, tf_R90, tf_mu, tf_rho0, walltime, iters`;
+- a per-run JSON record (`<rid>.json`) with the full config + every diagnostic;
 - publication-style figures (`fig/`, PDF + PNG, no titles, labelled colour bars);
-- checkpoints (`ckpt/`) for resume and for `refig`;
-- `scan/scan_manifest.json` recording code version, device and wall time.
+- checkpoints (`ckpt/`) — a rerun with the same config resumes from them.
 
 ## Package layout
 
@@ -121,7 +119,7 @@ becgpp/
   diagnostics.py   the per-run diagnostic bundle
   figures.py       publication figures + inline display
   io.py            run ids and CSV output
-  modes.py         validate/single/sweep/convergence/scan_all/refig + dispatch
+  modes.py         validate/smoke/single/tf_only/sweep/convergence + dispatch
   cli.py           command-line entry point
 examples/          ready-made YAML configs + run.py
 tests/             pytest (analytic validation gate)
