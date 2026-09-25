@@ -73,7 +73,8 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
     nonlocal_on = (G["kernel"] != "none" and abs(gc) > 1e-15)
     key = ("tf", G["kernel"], round(b2, 10), round(b3, 10), round(gc, 10),
            round(float(cfg["Omega"]), 10), int(G["N"]), round(float(G["L"]), 10),
-           int(G["ndim"]), int(G["s"]))
+           int(G["ndim"]), round(float(G["s"]), 10), round(float(G.get("trap_coeff", 0.5)), 10),
+           round(float(G.get("l_z", 0.0)), 10), int(G["pad"]))
     if cfg.get("tf_cache", True) and key in _TF_CACHE:
         return _TF_CACHE[key]
     tf = None

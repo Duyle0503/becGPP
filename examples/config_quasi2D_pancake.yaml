@@ -1,0 +1,14 @@
+# Self-gravitating pancake: quasi-2D Newton kernel of axial width l_z (trap units).
+# l_z -> 0 recovers the thin-disc 1/r kernel; large l_z softens it towards -ln r.
+mode: single
+dimension: "quasi2D"
+s: 2
+Omega: 0.0
+beta2: 100
+beta3: 0
+G_C: 10
+kernel: q2d
+l_z: 0.5
+L: 10
+Ngrid: 256
+seed: tf

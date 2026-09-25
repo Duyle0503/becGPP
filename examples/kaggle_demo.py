@@ -8,7 +8,7 @@
 # ---- Cell 1 -- install the package straight from GitHub -----------------
 # (double precision + GPU auto-select; the only run-time deps are torch/numpy/matplotlib,
 #  which Kaggle already ships, so the install is fast.)
-!pip install -q git+https://github.com/Duyle0503/becGPP.git
+!pip install -q git+https://github.com/Duyle0503/becGPP.git@v1.1.0
 
 import becgpp
 from becgpp import default_cfg, run, paths
@@ -46,7 +46,8 @@ print("E =", diag["E"], " Lz =", diag["Lz"], " Nv =", diag["Nv"], " w_LLL =", di
 
 
 # ---- Cell 5 -- CASE C: cubic-quintic flat-top droplet (2D) ---------------
-# Attractive 2-body + repulsive 3-body -> self-bound; density saturates at rho0 = -3 beta2 / 4 beta3.
+# Attractive 2-body + repulsive 3-body -> self-bound; the density approaches the flat top
+# rho0 = -3 beta2 / 4 beta3 as the droplet grows compared with its healing length.
 diag = run(default_cfg(
     mode="single", dimension="2D", s=2, Omega=1.0,
     beta2=-250, beta3=250, G_C=0, kernel="none",
@@ -54,7 +55,7 @@ diag = run(default_cfg(
 print("E =", diag["E"], " mu =", diag["mu"], " peak rho =", diag["peak"], " R90 =", diag["R90"])
 
 
-# ---- Cell 6 -- CASE D: boson star (3D Newton self-gravity) ---------------
+# ---- Cell 6 -- CASE D: trapped self-gravitating condensate (3D Newton) ---
 # Long-range 1/r attraction balanced by contact repulsion; spherical ground state.
 # IMPORTANT: the kernel is only active when G_C > 0. If you set kernel="newton"
 # but leave G_C=0, there is no long-range term and the log reports kernel="none"

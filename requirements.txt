@@ -1,5 +1,6 @@
-# Runtime dependencies (pinned to lower bounds; newer versions generally work).
-torch>=1.12
+# Runtime dependencies (lower bounds; pip install uses pyproject.toml, this file is for
+# `pip install -r requirements.txt` environments).
+torch>=2.0
 numpy>=1.21
 matplotlib>=3.5
 

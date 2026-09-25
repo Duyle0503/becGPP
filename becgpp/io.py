@@ -7,8 +7,8 @@ from .constants import CODE_VERSION
 
 
 def run_id(cfg):
-    keys = ["dimension", "s", "Omega", "beta2", "beta3", "G_C", "kernel",
-            "L", "Ngrid", "pad", "seed", "res_tol", "rng"]
+    keys = ["dimension", "s", "trap_coeff", "Omega", "beta2", "beta3", "G_C", "kernel",
+            "l_z", "L", "Ngrid", "pad", "seed", "nseeds", "res_tol", "rng", "cg_beta"]
     raw = json.dumps(dict(code=CODE_VERSION, **{k: cfg.get(k) for k in keys}), sort_keys=True)
     return f"{cfg.get('tag', 'becgpp')}_{hashlib.md5(raw.encode()).hexdigest()[:10]}"
 

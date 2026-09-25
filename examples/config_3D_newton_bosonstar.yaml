@@ -1,6 +1,6 @@
-# Non-rotating self-gravitating condensate in 3D (Newton 1/r) -> boson-star profile.
-# 3D residual has a resolution floor ~1e-3; convergence is witnessed by the energy
-# plateau (stop_reason=energy_converged) and a small virial residual.
+# Non-rotating, harmonically trapped self-gravitating condensate in 3D (Newton 1/r).
+# Converges on the residual criterion (stop_reason=converged); check virial_rel and
+# points_per_R90 (>= 12) in the output. Set s: 0 for the untrapped star.
 mode: single
 dimension: "3D"
 s: 2

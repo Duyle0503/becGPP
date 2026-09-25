@@ -4,7 +4,7 @@ import math
 import torch
 
 from .grid import dV, Lz_op
-from .interactions import long_range_phi
+from .interactions import long_range_phi, kernel_convolution
 
 
 def energy_components(p, G, beta2, beta3, Omega, G_C):
@@ -52,23 +52,37 @@ def observables(p, G, cfg):
     b2, b3, O, gc = cfg["beta2"], cfg["beta3"], cfg["Omega"], cfg["G_C"]
     d = float(G["ndim"])
     s = float(G["s"])
-    p_exp = float(G["kexp"])
     dv = dV(G)
     comp = energy_components(p, G, b2, b3, O, gc)
     E = comp["E"].item()
     rho = p.abs()**2
+    mass = (rho.sum() * dv).item()
     # mu = <psi|H_GP|psi> = E + E_contact + 2 E_three + E_grav  (any dimension)
     mu = E + comp["Econtact"].item() + 2.0 * comp["Ethree"].item() + comp["Egrav"].item()
     Lz = comp["Lz"].item()
     r2mean = (G["R2"] * rho).sum().item() * dv
-    # d-dimensional virial:  2Ekin - s Etrap + d Econtact + 2d Ethree + p Egrav = 0
+    # d-dimensional virial (Derrick/Pohozaev) identity from psi_l(r) = l^{-d/2} psi(r/l):
+    #   2 Ekin - s Etrap + d Econtact + 2d Ethree + T_lr = 0,
+    # with the long-range term T_lr = (G_C/2) int int rho rho' u K'(u):
+    #   newton (1/r):  T_lr = +Egrav
+    #   log (-ln r):   T_lr = -(G_C/2) M^2            (M = int rho = 1)
+    #   q2d:           T_lr = +(G_C/2) int rho (W * rho),  W = u K_eff'(u)
+    kind = G["kernel"]
+    if kind == "none" or abs(gc) <= 1e-15:
+        T_lr = 0.0
+    elif kind == "newton":
+        T_lr = comp["Egrav"].item()
+    elif kind == "log":
+        T_lr = -0.5 * gc * mass * mass
+    else:
+        T_lr = 0.5 * gc * (rho * kernel_convolution(rho, G, "W")).sum().item() * dv
     virial = (2.0 * comp["Ekin"] - s * comp["Etrap"] + d * comp["Econtact"]
-              + 2.0 * d * comp["Ethree"] + p_exp * comp["Egrav"]).item()
-    vscale = sum(abs(comp[k].item()) for k in ("Ekin", "Etrap", "Econtact", "Ethree", "Egrav"))
+              + 2.0 * d * comp["Ethree"]).item() + T_lr
+    vscale = sum(abs(comp[k].item()) for k in ("Ekin", "Etrap", "Econtact", "Ethree", "Egrav")) + abs(T_lr)
     binding_ref = 1.0 if (abs(O - 1.0) < 1e-12 and s == 2 and G["ndim"] == 2) else float("nan")
     out = dict(E=E, mu=mu, Lz=Lz, rrms=math.sqrt(max(r2mean, 0.0)), peak=rho.max().item(),
                E_bind=(E - binding_ref) if math.isfinite(binding_ref) else float("nan"),
-               virial=virial, virial_rel=abs(virial) / max(1.0, vscale))
+               virial=virial, virial_rel=abs(virial) / max(1.0, vscale), virial_lr_term=T_lr)
     for k in ("Ekin", "Etrap", "Econtact", "Ethree", "Erot", "Egrav"):
         out[k] = comp[k].item()
     # oblateness: R_perp / R_z (normalized so an isotropic sphere gives 1)

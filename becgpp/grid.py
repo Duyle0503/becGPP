@@ -18,20 +18,49 @@ def geometry(cfg):
 
 
 def resolve_kernel(cfg):
-    """Resolve kernel choice into ('newton'|'log'|'none', exponent p)."""
+    """Resolve the kernel choice into (kind, tag) with kind in
+    'newton' | 'log' | 'q2d' | 'none'.
+
+    ``kernel="auto"`` picks the natural kernel of the geometry: ``log`` (the
+    planar Green function) in 2D, ``newton`` in 3D, and in ``quasi2D`` the
+    reduced Newton kernel ``q2d`` of axial width ``l_z`` (or its thin-disc limit
+    ``newton`` = 1/r when ``l_z`` = 0)."""
     ndim, quasi = geometry(cfg)
     k = str(cfg.get("kernel", "auto")).lower()
-    if abs(float(cfg.get("G_C", 0.0))) <= 1e-15:
+    if abs(float(cfg.get("G_C", 0.0))) <= 1e-15 or k == "none":
         return "none", 0
-    if k == "none":
-        return "none", 0
+    lz = float(cfg.get("l_z", 0.0))
     if k == "auto":
-        k = "log" if (ndim == 2 and not quasi) else "newton"
+        if ndim == 3:
+            k = "newton"
+        elif quasi:
+            k = "q2d" if lz > 0 else "newton"
+        else:
+            k = "log"
     if k == "newton":
-        return "newton", 1          # 1/|r|,  scales as lambda^1
+        return "newton", 1          # 1/|r|: homogeneous of degree -1
     if k == "log":
-        return "log", 0             # -ln|r| (2D only); virial anomaly, see note
+        if ndim != 2:
+            raise ValueError("kernel='log' is two-dimensional only")
+        return "log", 0             # -ln|r|: virial term -G_C/2 (see operators.observables)
+    if k == "q2d":
+        if ndim != 2:
+            raise ValueError("kernel='q2d' needs dimension '2D' or 'quasi2D'")
+        if lz <= 0:
+            raise ValueError("kernel='q2d' needs an axial width l_z > 0")
+        return "q2d", 0             # not homogeneous: virial uses the W = u K' kernel
     raise ValueError(f"unknown kernel {k!r}")
+
+
+def _memory_estimate_gb(ndim, N, pad, kernel):
+    """Rough peak device memory (GB) of one ground-state solve."""
+    n_field = float(N) ** ndim
+    base = 14 * 16 * n_field                               # ~14 complex128 fields
+    if kernel != "none":
+        m = float(pad * N) ** ndim
+        base += 6 * 16 * m                                 # padded convolution buffers
+        base += 4 * 8 * m                                  # kernel construction (meshgrids)
+    return base / 1e9
 
 
 def make_grid(cfg):
@@ -57,10 +86,16 @@ def make_grid(cfg):
         K2 = KX**2 + KY**2 + KZ**2
     tc = float(cfg.get("trap_coeff", 0.5))               # trap strength: V = tc * r^s
     V = tc * R2 ** (s / 2.0) if s > 0 else torch.zeros_like(R2)
+    pad = max(2, int(cfg.get("pad", 2)))
+    mem = _memory_estimate_gb(ndim, N, pad, kkind)
+    if mem > float(cfg.get("mem_warn_gb", 12.0)):
+        print(f"[warn] estimated peak memory ~{mem:.0f} GB for N={N} ({ndim}D, kernel={kkind}, "
+              f"pad={pad}); reduce Ngrid if the device runs out of memory.")
     return dict(ndim=ndim, quasi=quasi, coords=coords, kcoords=kcoords,
                 X=coords[0], Y=coords[1], KX=kcoords[0], KY=kcoords[1],
-                R2=R2, V=V, K2=K2, s=s, dx=dx, N=N, L=L,
-                kernel=kkind, kexp=kexp, pad=max(2, int(cfg.get("pad", 2))))
+                R2=R2, V=V, K2=K2, s=s, trap_coeff=tc, dx=dx, N=N, L=L,
+                kernel=kkind, kexp=kexp, l_z=float(cfg.get("l_z", 0.0)), pad=pad,
+                mem_estimate_gb=mem)
 
 
 def dV(G):

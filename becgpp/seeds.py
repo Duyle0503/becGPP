@@ -50,11 +50,14 @@ def triangular_seed(G, cfg):
     the in-plane coordinates only), arranged triangularly in the x-y plane -- the
     standard rotating-condensate vortex lattice. The envelope is the (oblate) TF
     density, so the imprinted state already carries angular momentum."""
+    O = float(cfg.get("Omega", 0.0))
+    if abs(O) < 0.3:                                      # (almost) no rotation: no lattice to seed
+        return tf_seed(G, cfg)
     tf = extract_tf(cfg, G)
     if tf is None or not tf.get("converged", False):
         return tf_seed(G, cfg)
     amp = torch.sqrt(torch.clamp(tf["n"], min=0.0))
-    O = max(float(cfg.get("Omega", 1.0)), 1e-12)
+    O = abs(O)
     av = math.sqrt(2.0 * math.pi / (math.sqrt(3.0) * O))
     dy = math.sqrt(3.0) * av / 2.0
     Rperp = _inplane_radius(tf["n"], G, 0.90)

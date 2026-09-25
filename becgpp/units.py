@@ -10,7 +10,11 @@ Length scale a_ho = sqrt(hbar/(m*omega_perp)); energy scale hbar*omega_perp;
 time scale 1/omega_perp.  Standard mean-field maps:
     3D contact      : beta2 = 4*pi*N*a_s/a_ho
     2D pancake      : beta2 = sqrt(8*pi)*N*a_s/l_z,  l_z = sqrt(hbar/(m*omega_z))
-    3D self-gravity : G_C   = G*m^2*N^2/(a_ho*hbar*omega_perp)   (Newton 1/r)
+    3D self-gravity : G_C   = G*m^2*N/(a_ho*hbar*omega_perp)   (Newton 1/r)
+                      [per-particle energy with int|psi|^2 = 1, exactly like
+                       beta2 = g N; one factor of N, not N^2]
+    pancake gravity : same G_C (the axial integral of chi is 1), kernel q2d with
+                      l_z = sqrt(hbar/(m*omega_z)) / a_ho  (dimensionless)
     quintic/3-body  : beta3 supplied via G3 (regime specific; see the paper)
 NOTE the cubic-quintic literature often writes G2=2*beta2, G3=2*beta3 (energy
 (G2/4)rho^2 + (G3/6)rho^3); to reproduce it set beta2=G2/2, beta3=G3/2.
@@ -31,7 +35,7 @@ def sim_params_from_physical(regime, m, omega_perp, N, a_s=0.0, omega_z=None,
                              G=G_NEWTON, beta3=0.0, verbose=True):
     """Return dimensionless CFG couplings for a chosen physical regime, plus the
     SI scales for converting outputs back.
-       regime: 'bec3d' | 'bec2d_pancake' | 'selfgrav3d'
+       regime: 'bec3d' | 'bec2d_pancake' | 'selfgrav3d' | 'selfgrav_pancake'
        m [kg], omega_perp [rad/s], N atoms, a_s [m], omega_z [rad/s] (pancake), G [SI]."""
     sc = physical_scales(m, omega_perp)
     a_ho = sc["a_ho_m"]
@@ -47,11 +51,22 @@ def sim_params_from_physical(regime, m, omega_perp, N, a_s=0.0, omega_z=None,
         out["dimension"] = "quasi2D"
         out["l_z_m"] = l_z
     elif regime == "selfgrav3d":
-        out["G_C"] = G * m * m * N * N / (a_ho * HBAR * omega_perp)
+        out["G_C"] = G * m * m * N / (a_ho * HBAR * omega_perp)
         out["kernel"] = "newton"
         out["dimension"] = "3D"
         if a_s:
             out["beta2"] = 4.0 * math.pi * N * a_s / a_ho
+    elif regime == "selfgrav_pancake":
+        if omega_z is None:
+            raise ValueError("selfgrav_pancake needs omega_z")
+        l_z = math.sqrt(HBAR / (m * omega_z))
+        out["G_C"] = G * m * m * N / (a_ho * HBAR * omega_perp)
+        out["kernel"] = "q2d"
+        out["dimension"] = "quasi2D"
+        out["l_z"] = l_z / a_ho
+        out["l_z_m"] = l_z
+        if a_s:
+            out["beta2"] = math.sqrt(8.0 * math.pi) * N * a_s / l_z
     else:
         raise ValueError(f"unknown regime {regime!r}")
     if verbose:

@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 
 from . import paths
 from .constants import DEV, CODE_VERSION
-from .grid import make_grid, geometry, dV, norm_of, resolve_kernel, auto_grid
+from .grid import make_grid, geometry, dV, norm_of, resolve_kernel, auto_grid, resample_state
 from .interactions import long_range_phi
 from .operators import energy_components
 from .fields import radial_average
@@ -52,6 +52,58 @@ def mode_validate(cfg):
         print(f"    a={a}: Egrav rel={eg:.2e}  phi0 rel={ep:.2e}")
         rows += [dict(test="2D_gauss", case=f"a={a}", quantity="Egrav", rel_error=eg),
                  dict(test="2D_gauss", case=f"a={a}", quantity="phi0", rel_error=ep)]
+    print("[2D-1b] free-space -ln|r| kernel vs analytic Gaussian")
+    # rho = exp(-r^2/a^2)/(pi a^2):  phi(0) = G_C (ln a - gamma/2),
+    #                               E_g = (G_C/2) (ln(sqrt2 a) - gamma/2)
+    Glog = make_grid(dict(cfg, dimension="2D", s=2, kernel="log", G_C=1.0, L=12.0, Ngrid=Nv))
+    mlg = mlp = 0.0
+    euler_gamma = 0.5772156649015329
+    for a in (0.5, 2.0, 3.0):
+        psi = torch.exp(-Glog["R2"] / (2 * a * a)).to(torch.complex128)
+        psi = psi / norm_of(psi, Glog)
+        rho = psi.abs()**2
+        phi = long_range_phi(rho, Glog, 1.0)
+        Eg = 0.5 * (phi * rho).sum().item() * dv
+        phi0 = phi[Nv // 2, Nv // 2].item()
+        Eg_ex = 0.5 * (math.log(math.sqrt(2.0) * a) - 0.5 * euler_gamma)
+        p0_ex = math.log(a) - 0.5 * euler_gamma
+        eg = abs(Eg - Eg_ex) / abs(Eg_ex)
+        ep = abs(phi0 - p0_ex) / abs(p0_ex)
+        mlg, mlp = max(mlg, eg), max(mlp, ep)
+        print(f"    a={a}: Egrav rel={eg:.2e}  phi0 rel={ep:.2e}")
+        rows += [dict(test="2D_log_gauss", case=f"a={a}", quantity="Egrav", rel_error=eg),
+                 dict(test="2D_log_gauss", case=f"a={a}", quantity="phi0", rel_error=ep)]
+
+    print("[2D-1c] quasi-2D kernel K_eff(l_z) vs analytic Gaussian (3D potential of a"
+          " Gaussian pancake)")
+    # rho = exp(-r^2/a^2)/(pi a^2) with axial Gaussian of variance l_z^2 (pair):
+    #   phi(0) = -G_C (2/sqrt(pi)) (1/(sqrt2 s_p)) F(l_z/s_p),  s_p = a/sqrt2,
+    #   F(t) = arccos(t)/sqrt(1-t^2) (t<1), arccosh(t)/sqrt(t^2-1) (t>1)
+    def _F(t):
+        if abs(t - 1.0) < 1e-12:
+            return 1.0
+        return math.acos(t) / math.sqrt(1 - t * t) if t < 1 else math.acosh(t) / math.sqrt(t * t - 1)
+    mq = 0.0
+    for lz in (0.25, 1.0):
+        Gq = make_grid(dict(cfg, dimension="quasi2D", s=2, kernel="q2d", l_z=lz, G_C=1.0,
+                            L=12.0, Ngrid=Nv))
+        for a in (1.0, 2.0):
+            psi = torch.exp(-Gq["R2"] / (2 * a * a)).to(torch.complex128)
+            psi = psi / norm_of(psi, Gq)
+            rho = psi.abs()**2
+            phi = long_range_phi(rho, Gq, 1.0)
+            Eg = 0.5 * (phi * rho).sum().item() * dv
+            phi0 = phi[Nv // 2, Nv // 2].item()
+            sp = a / math.sqrt(2.0)
+            p0_ex = -(2 / math.sqrt(math.pi)) / (math.sqrt(2) * sp) * _F(lz / sp)
+            Eg_ex = -0.5 * (2 / math.sqrt(math.pi)) / (math.sqrt(2) * a) * _F(lz / a)
+            ep = abs(phi0 - p0_ex) / abs(p0_ex)
+            eg = abs(Eg - Eg_ex) / abs(Eg_ex)
+            mq = max(mq, ep, eg)
+            print(f"    l_z={lz} a={a}: Egrav rel={eg:.2e}  phi0 rel={ep:.2e}")
+            rows += [dict(test="q2D_gauss", case=f"lz={lz},a={a}", quantity="Egrav", rel_error=eg),
+                     dict(test="q2D_gauss", case=f"lz={lz},a={a}", quantity="phi0", rel_error=ep)]
+
     print("[2D-2] LLL single-particle identities (E_sp=1, Lz=m, <r2>=m+1)")
     ml = 0.0
     for m in (0, 1, 10, 30):
@@ -65,9 +117,11 @@ def mode_validate(cfg):
         e = max(abs(Esp - 1.0), abs(Lz - m), abs(r2 - (m + 1)))
         ml = max(ml, e)
         print(f"    m={m:2d}: E_sp={Esp:.6f} Lz={Lz:.5f} <r2>={r2:.5f} maxerr={e:.2e}")
-        rows.append(dict(test="2D_LLL", case=f"m={m}", quantity="ids", rel_error=e))
+        rows.append(dict(test="2D_LLL", case=f"m={m}", quantity="max|E-1|,|Lz-m|,|r2-m-1|",
+                         rel_error=e))
 
     # ---- local flat-top TF closed form (2D & 3D) ----
+    # consistency check of the TF extractor (formula bookkeeping, not a solver test)
     print("[TF] local flat-top: rho0=-3b2/(4b3); mu=b2 rho0+b3 rho0^2; R from int=1")
     mtf = 0.0
     for ndim in (2, 3):
@@ -107,13 +161,18 @@ def mode_validate(cfg):
     # The Gauss-Legendre cell-averaged kernels are second order in both dimensions.
     print("[order] free-space kernel convergence order (phi(0) of a Gaussian)")
     kernel_orders = {}
-    for ndim, Ns, sig, L in ((2, (192, 256, 384, 512), 1.0, 10.0),
-                             (3, (64, 96, 128, 160), 1.0, 8.0)):
+    euler_gamma = 0.5772156649015329
+    for name, ndim, kern, Ns, sig, L in (("2D", 2, "newton", (192, 256, 384, 512), 1.0, 10.0),
+                                        ("2D_log", 2, "log", (96, 128, 192, 256), 1.0, 10.0),
+                                        ("3D", 3, "newton", (64, 96, 128, 160), 1.0, 8.0)):
         dxs, errs = [], []
-        ex = (-math.sqrt(math.pi) / sig) if ndim == 2 else (-2.0 / (math.sqrt(math.pi) * sig))
+        if kern == "log":
+            ex = math.log(sig) - 0.5 * euler_gamma                # phi(0)/G_C for -ln r
+        else:
+            ex = (-math.sqrt(math.pi) / sig) if ndim == 2 else (-2.0 / (math.sqrt(math.pi) * sig))
         for Ni in Ns:
             Gk = make_grid(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=2,
-                                kernel="newton", G_C=1.0, L=L, Ngrid=int(Ni)))
+                                kernel=kern, G_C=1.0, L=L, Ngrid=int(Ni)))
             psi = torch.exp(-Gk["R2"] / (2 * sig * sig)).to(torch.complex128)
             psi = psi / norm_of(psi, Gk)
             phi = long_range_phi(psi.abs()**2, Gk, 1.0)
@@ -121,22 +180,24 @@ def mode_validate(cfg):
             p0 = (phi[c, c].item() if ndim == 2 else phi[c, c, c].item())
             dxs.append(Gk["dx"])
             errs.append(abs(p0 - ex) / abs(ex))
-        order = float(np.polyfit(np.log(dxs), np.log(errs), 1)[0])
-        kernel_orders[f"{ndim}D"] = order
-        print(f"    {ndim}D: fitted order = {order:.2f}   errs={['%.2e' % e for e in errs]}")
+        order = float(np.polyfit(np.log(dxs), np.log(np.maximum(errs, 1e-16)), 1)[0])
+        kernel_orders[name] = order
+        print(f"    {name}: fitted order = {order:.2f}   errs={['%.2e' % e for e in errs]}")
         for dxi, ei in zip(dxs, errs):
-            rows.append(dict(test=f"{ndim}D_kernel_order", case=f"dx={dxi:.4f}",
+            rows.append(dict(test=f"{name}_kernel_order", case=f"dx={dxi:.4f}",
                              quantity="phi0_relerr", rel_error=ei, order=order))
 
     write_csv(os.path.join(paths.BASE, "validation.csv"), rows)
-    passed = (mg < 5e-3 and mp < 5e-3 and ml < 1e-4 and mtf < 1e-2 and m3 < 5e-2)
+    passed = (mg < 5e-3 and mp < 5e-3 and mlg < 5e-3 and mlp < 5e-3 and mq < 5e-3
+              and ml < 1e-4 and mtf < 1e-12 and m3 < 5e-3)
     order_ok = all(o > 1.7 for o in kernel_orders.values())
     print("-" * 70)
-    print(f"[validate] 2D-Coulomb Eg={mg:.2e} phi0={mp:.2e} | LLL={ml:.2e} | flatTF={mtf:.2e} | "
-          f"3D-phi0={m3:.2e} | kernel_order={kernel_orders} | PASS={passed and order_ok}")
+    print(f"[validate] 2D-Coulomb Eg={mg:.2e} phi0={mp:.2e} | 2D-log Eg={mlg:.2e} phi0={mlp:.2e} | "
+          f"q2D={mq:.2e} | LLL={ml:.2e} | flatTF={mtf:.2e} | 3D-phi0={m3:.2e} | "
+          f"kernel_order={kernel_orders} | PASS={passed and order_ok}")
     print("[validate] thresholds relax on coarse N; use validate_N=512 for publication numbers")
-    return dict(passed=passed and order_ok, mg=mg, mp=mp, ml=ml, mtf=mtf, m3=m3,
-                kernel_orders=kernel_orders)
+    return dict(passed=passed and order_ok, mg=mg, mp=mp, mlg=mlg, mlp=mlp, mq=mq,
+                ml=ml, mtf=mtf, m3=m3, kernel_orders=kernel_orders)
 
 
 # =============================================================================
@@ -164,8 +225,13 @@ def mode_single(cfg):
         psi, G, obs = ground_state(cfg, G=G, psi0=psi0, verbose=True)
     diag = diagnostics(psi, G, cfg)
     diag.update(rid=rid, iters=obs["iters"], walltime=obs["walltime"],
-                resid_rel=obs["resid_rel"], converged=obs["converged"],
-                dimension=cfg["dimension"], kernel=G["kernel"])
+                resid_rel=obs["resid_rel"], min_resid=obs.get("min_resid", float("nan")),
+                converged=obs["converged"], stop_reason=obs.get("stop_reason", ""),
+                seed_used=obs.get("seed_used", cfg.get("seed")),
+                seed_energy_spread=obs.get("seed_energy_spread", 0.0),
+                dimension=cfg["dimension"], kernel=G["kernel"], L=cfg["L"], N=cfg["Ngrid"],
+                s=cfg["s"], Omega=cfg["Omega"], beta2=cfg["beta2"], beta3=cfg["beta3"],
+                G_C=cfg["G_C"], l_z=cfg.get("l_z", 0.0), device=str(DEV))
     if cfg.get("save_ckpt", True):
         torch.save(dict(psi=psi.cpu(), cfg=cfg, obs=diag), ck)
     if cfg.get("save_figs", True):
@@ -226,12 +292,38 @@ def mode_tf_only(cfg):
 #  MODE: sweep  --  vary ANY numeric CFG key over a list; TF + all diagnostics
 # =============================================================================
 def mode_sweep(cfg):
+    """Vary one numeric key over ``sweep_values`` with every other key fixed.
+
+    At each point the solver is run from up to two kinds of starting state and the
+    lowest-energy result is kept:
+
+    * continuation -- the previous point's converged state (resampled if the grid
+      changed), when ``sweep_continuation`` is True;
+    * fresh seeds  -- ``nseeds`` seeds cycled as in ``single`` (triangular vortex
+      lattice first when rotating), when ``nseeds`` > 1 or no previous state exists.
+
+    The candidate with the lowest energy is kept (variational selection); its
+    ``converged`` flag and ``stop_reason`` are reported, so a point that needs more
+    iterations is visible in the output.
+
+    Continuation alone can stay on a metastable branch (e.g. a vortex-free state at
+    fast rotation); fresh seeds alone lose the warm start. Using both and keeping
+    the lower energy makes a sweep follow the ground-state branch.
+    """
     param = cfg.get("sweep_param", "G_C")
     values = list(cfg.get("sweep_values", []))
+    use_cont = bool(cfg.get("sweep_continuation", True))
+    tag0 = cfg.get("tag", "becgpp")
+    stem = param if tag0 == "becgpp" else f"{tag0}_{param}"   # distinct files per tagged sweep
+    nseeds = int(cfg.get("nseeds", 1))
     print("=" * 70)
-    print(f"SWEEP over {param!r} = {values}")
+    print(f"SWEEP over {param!r} = {values}  (continuation={use_cont}, nseeds={nseeds})")
+    rot = [abs(float(v if param == "Omega" else cfg.get("Omega", 0.0))) for v in values]
+    if max(rot) >= 0.5 and nseeds < 2:
+        print("[hint] rotating sweep with nseeds=1: continuation alone can stay on a vortex-free")
+        print("       (metastable) branch. Use nseeds>=2 so each point also tries a vortex-lattice seed.")
     rows = []
-    prev = None
+    prev, G_prev = None, None
     for val in values:
         c = dict(cfg)
         c[param] = val
@@ -240,24 +332,45 @@ def mode_sweep(cfg):
             c["L"], c["Ngrid"] = L, N
         c["tag"] = f"{cfg.get('tag', 'becgpp')}_{param}{val:g}"
         G = make_grid(c)
-        psi0 = prev if (prev is not None and tuple(prev.shape) == tuple(G["R2"].shape)) else None
         print(f"\n--- {param}={val}  L={c['L']:.3g} N={c['Ngrid']} {c['dimension']} ---")
-        psi, G, obs = ground_state(c, G=G, psi0=psi0, verbose=False)
+        cands = []
+        if use_cont and prev is not None:
+            psi0 = prev if tuple(prev.shape) == tuple(G["R2"].shape) else resample_state(prev, G_prev, G)
+            if psi0 is not None:
+                psi_c, G, obs_c = ground_state(c, G=G, psi0=psi0, verbose=False)
+                cands.append(("continuation", psi_c, obs_c))
+        if nseeds > 1 or not cands:
+            if nseeds > 1:
+                psi_s, G, obs_s = ground_state_multiseed(c, G=G, verbose=False)
+                cands.append((f"seed:{obs_s.get('seed_used', c.get('seed'))}", psi_s, obs_s))
+            else:
+                psi_s, G, obs_s = ground_state(c, G=G, verbose=False)
+                cands.append((f"seed:{c.get('seed')}", psi_s, obs_s))
+        cands.sort(key=lambda t: t[2]["E"])          # variational: lowest energy wins
+        branch, psi, obs = cands[0]
         diag = diagnostics(psi, G, c)
         diag.update({param: val})
-        diag.update(rid=run_id(c), resid_rel=obs["resid_rel"],
-                    iters=obs["iters"], converged=obs["converged"], walltime=obs["walltime"])
+        diag.update(rid=run_id(c), resid_rel=obs["resid_rel"], iters=obs["iters"],
+                    converged=obs["converged"], stop_reason=obs.get("stop_reason", ""),
+                    walltime=sum(t[2]["walltime"] for t in cands), branch=branch,
+                    candidate_E=";".join(f"{t[0]}={t[2]['E']:.10g}" for t in cands),
+                    L=c["L"], N=c["Ngrid"], dimension=c["dimension"], kernel=G["kernel"])
         rows.append(diag)
-        prev = psi.detach()
+        prev, G_prev = psi.detach(), G
+        if cfg.get("save_ckpt", True):
+            torch.save(dict(psi=psi.cpu(), cfg=c, obs=diag),
+                       os.path.join(paths.CKPT_DIR, f"{diag['rid']}.pt"))
         if cfg.get("save_figs", True):
             save_state_figs(psi, G, c, diag["rid"])
             save_tf_comparison(psi, G, c, diag["rid"])
         show_density(psi, G, c, title=f"{param}={val}")
-        write_csv(os.path.join(paths.BASE, f"sweep_{param}.csv"), rows)
-        print(f"    E={diag['E']:.6f} mu={diag['mu']:.5f} Lz={diag['Lz']:.4f} Nv={diag['Nv']} "
-              f"R90={diag['R90']:.4f} TF_R90={diag['tf_R90']:.4f} vir={diag['virial_rel']:.2e} "
-              f"res={diag['resid_rel']:.2e}")
-    sweep_figs(rows, param)
+        write_csv(os.path.join(paths.BASE, f"sweep_{stem}.csv"), rows)
+        print(f"    [{branch}] E={diag['E']:.8f} mu={diag['mu']:.5f} Lz={diag['Lz']:.4f} "
+              f"Nv={diag['Nv']} R90={diag['R90']:.4f} TF_R90={diag['tf_R90']:.4f} "
+              f"vir={diag['virial_rel']:.2e} res={diag['resid_rel']:.2e} conv={diag['converged']}")
+        if len(cands) > 1:
+            print(f"    candidates: {diag['candidate_E']}")
+    sweep_figs(rows, param, label=stem)
     return rows
 
 
@@ -314,7 +427,7 @@ def mode_convergence(cfg):
 def mode_smoke(cfg):
     print("=" * 70)
     print("SMOKE: validate gate + a tiny run + TF extraction")
-    gate = mode_validate(dict(cfg, validate_N=192))
+    gate = mode_validate(dict(cfg, validate_N=256))
     small = dict(cfg, L=10.0, Ngrid=(128 if geometry(cfg)[0] == 2 else 72),
                  maxit=1500, res_tol=3e-3, nseeds=1, save_figs=True, want_lll=True, tag="smoke")
     print("-" * 70)

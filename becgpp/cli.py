@@ -43,6 +43,12 @@ def _coerce(value, template):
             return float(value)
     if isinstance(template, float):
         return float(value)
+    if isinstance(template, (list, tuple)):
+        # lists on the command line are JSON, e.g. --sweep_values "[5, 10, 20]"
+        out = json.loads(value)
+        if not isinstance(out, list):
+            raise SystemExit(f"expected a JSON list, got {value!r}")
+        return out
     return value
 
 

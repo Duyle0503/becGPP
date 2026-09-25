@@ -37,8 +37,9 @@ def _preconditioner(grad, psi, G, cfg):
         local = local + long_range_phi(rho, G, gc)
     mask = rho > 0.05 * rho.max()
     vals = local[mask]
-    sigma = float(torch.median(vals).item()) if vals.numel() else 0.5
-    sigma = max(sigma, 0.5)
+    floor = float(cfg.get("precond_shift_min", 0.5))
+    sigma = float(torch.median(vals).item()) if vals.numel() else floor
+    sigma = max(sigma, floor)                      # keep the metric positive definite
     denom = 0.5 * G["K2"] + sigma
     z = torch.fft.ifftn(torch.fft.fftn(grad) / denom)
     return _proj_tangent(z, psi, dV(G)), sigma
@@ -59,17 +60,25 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     res_tol = float(cfg["res_tol"])
     etol = float(cfg.get("energy_tol", 1e-9))
     check = int(cfg.get("check", 200))
-    alpha = 1.0
-    alpha_min, alpha_max = 1e-8, 3.0
-    ls_max = 8
+    alpha = float(cfg.get("step", 1.0))                  # initial trial step
+    alpha_min, alpha_max = 1e-8, float(cfg.get("step_max", 3.0))
+    ls_max = int(cfg.get("linesearch_max", 8))          # Armijo halvings per iteration
     c1 = 1e-4
     shrink, growth = 0.5, 1.1
-    bb_min, bb_max, bb_mix = 0.05, 3.0, 0.5
-    restart_period = 30
+    bb_min, bb_max, bb_mix = 0.05, alpha_max, 0.5
+    restart_period = int(cfg.get("cg_restart", 30))
+    # Polak-Ribiere coefficient: "pr" uses the plain gradient,
+    #   beta = <g, g - g_old> / <g_old, g_old>          (default; used for the paper runs)
+    # "pr_precond" uses the preconditioned (Sobolev) inner product,
+    #   beta = <z, g - g_old> / <z_old, g_old>          (standard preconditioned PR)
+    cg_beta = str(cfg.get("cg_beta", "pr")).lower()
+    if cg_beta not in ("pr", "pr_precond", "none"):
+        raise ValueError(f"cg_beta must be 'pr', 'pr_precond' or 'none', got {cg_beta!r}")
     # windowed energy convergence: stop when the NET relative energy drop over a
-    # window falls below energy_tol. This is the physical convergence witness for
-    # hard 3D self-gravitating states, where the residual ||(H-mu)psi|| has a
-    # resolution-set floor (~1e-3) and oscillates while the energy still relaxes.
+    # window falls below energy_tol. This is a fallback witness for under-resolved
+    # grids, where the residual ||(H-mu)psi|| can stall at a resolution-set floor
+    # above res_tol while the energy has already settled. On adequately resolved
+    # grids the residual criterion fires first (stop_reason="converged").
     conv_window = int(cfg.get("conv_window", 2000))
     E_ref = None
     it_ref = 0
@@ -87,6 +96,7 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     grad, mu, _, resid_rel = residual(psi)
     z, sigma = _preconditioner(grad, psi, G, cfg)
     direction = z.clone()
+    z_prev = z
     converged = False
     stop = "maxit"
     it = 0
@@ -98,12 +108,16 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     E_ref = E
     for it in range(maxit):
         z, sigma = _preconditioner(grad, psi, G, cfg)
-        if it == 0 or (restart_period > 0 and it % restart_period == 0):
+        if it == 0 or cg_beta == "none" or (restart_period > 0 and it % restart_period == 0):
             beta = 0.0
         else:
             y = grad - grad_prev
-            den = max(_inner_re(grad_prev, grad_prev, dv), 1e-300)
-            beta = max(0.0, _inner_re(grad, y, dv) / den)
+            if cg_beta == "pr_precond":
+                den = max(_inner_re(z_prev, grad_prev, dv), 1e-300)
+                beta = max(0.0, _inner_re(z, y, dv) / den)
+            else:
+                den = max(_inner_re(grad_prev, grad_prev, dv), 1e-300)
+                beta = max(0.0, _inner_re(grad, y, dv) / den)
             if not math.isfinite(beta):
                 beta = 0.0
         dirc = _proj_tangent(z + beta * direction, psi, dv)
@@ -147,6 +161,7 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
             continue
         psi_prev = psi
         grad_prev = grad
+        z_prev = z
         E_prev = E
         psi = psi_t
         E = Et
@@ -176,7 +191,9 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
                 break
             E_ref = E
             it_ref = it
-    # report the lowest-residual iterate (energy is monotone, so this is variationally sound)
+    # Return the lowest-residual iterate seen. Accepted Armijo steps never raise
+    # the energy, so this iterate differs from the last one only when the residual
+    # oscillated; its energy is reported as computed, not assumed minimal.
     if best_resid < resid_rel:
         psi = best_psi
     resid_abs, mu_f, resid_rel = compute_residual(psi, G, cfg)
@@ -192,7 +209,9 @@ def ground_state_multiseed(cfg, G=None, verbose=False):
     n = int(cfg.get("nseeds", 1))
     if G is None:
         G = make_grid(cfg)
-    seed_cycle = ("triangular", "tf", "gaussian")   # triangular first: needed for rotating branches
+    rotating = abs(float(cfg.get("Omega", 0.0))) >= 0.3
+    # triangular first: needed for rotating branches; vortex-free seeds otherwise
+    seed_cycle = ("triangular", "tf", "gaussian") if rotating else ("tf", "gaussian")
     best = None
     Es = []
     for j in range(max(1, n)):
@@ -201,9 +220,14 @@ def ground_state_multiseed(cfg, G=None, verbose=False):
         c["seed"] = seed_cycle[j % len(seed_cycle)]
         psi, G, obs = ground_state(c, G=G, verbose=verbose)
         Es.append(obs["E"])
-        score = (0 if obs["converged"] else 1, obs["E"])
+        # Variational selection: the energy of any normalized state bounds the ground
+        # state from above, so the lowest energy wins even if that candidate stopped
+        # before res_tol (its 'converged' flag is reported with it).
+        score = (obs["E"],)
         if best is None or score < best[0]:
             best = (score, psi, obs, c)
-    _, psi, obs, _ = best
+    _, psi, obs, cbest = best
     obs["seed_energy_spread"] = (max(Es) - min(Es)) if len(Es) > 1 else 0.0
+    obs["seed_used"] = cbest["seed"]
+    obs["seed_energies"] = ";".join(f"{e:.10g}" for e in Es)
     return psi, G, obs
