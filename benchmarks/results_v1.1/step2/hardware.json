@@ -1,0 +1,13 @@
+{
+  "python": "3.12.13",
+  "torch": "2.10.0+cu128",
+  "becgpp": "1.1.0",
+  "cuda": "12.8",
+  "device": "cuda",
+  "gpu": "Tesla T4",
+  "gpu_mem_GB": 15.6,
+  "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz",
+  "cpu_logical_cores": 4,
+  "torch_cpu_threads": 2,
+  "nvidia_smi": "Tesla T4, 580.159.04, 15360 MiB, 1590 MHz\nTesla T4, 580.159.04, 15360 MiB, 1590 MHz"
+}

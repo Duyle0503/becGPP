@@ -39,5 +39,6 @@
   `1/r` when `l_z = 0`). Unit mapping `regime="selfgrav_pancake"`.
 - `cg_beta` option: `pr` (default, as 1.0.0), `pr_precond`, `none`.
 - Diagnostics: `stop_reason`, `seed_used`, `points_per_R90`, `virial_lr_term`.
-- `benchmarks/`: Kaggle scripts that regenerate the paper's tables and figures.
+- `benchmarks/`: Kaggle scripts that regenerate the paper's tables and figures, and
+  `benchmarks/results_v1.1/`: the raw results (Tesla T4) quoted in the paper.
 - Tests for kernel virials, kernel limits, safe defaults and unit scaling.

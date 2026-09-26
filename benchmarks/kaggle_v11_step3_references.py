@@ -151,7 +151,11 @@ mr = []
 for b2 in (0.0, 0.5, 2.0, 8.0, 32.0, 128.0, 512.0, 2048.0):
     k = math.sqrt(4 * math.pi * GC / b2) if b2 > 0 else float("nan")
     R_tf = math.pi / k if b2 > 0 else float("nan")
-    L = max(3.0, 1.35 * R_tf) if b2 > 0 else 3.0
+    # box from an interpolated R99 estimate (the true radius exceeds the TF radius
+    # at moderate chi; sizing from R_TF alone left the chi~1e2-1e3 runs box-limited)
+    chi_est = GC * b2 / math.pi
+    R99_est = 1.1 * (SN_R99 + 1.4989 * math.sqrt(chi_est)) / GC
+    L = max(3.0, 1.4 * R99_est)
     N = 160 if L <= 8 else 192
     d = solve(base_cfg(beta2=b2, G_C=GC, L=L, Ngrid=N, seed=("tf" if b2 > 0 else "gaussian")))
     chi = GC * b2 / math.pi

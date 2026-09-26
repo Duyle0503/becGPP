@@ -1,0 +1,7 @@
+{
+  "torch": "2.10.0+cu128",
+  "becgpp": "1.1.0",
+  "device": "cuda",
+  "gpu": "Tesla T4",
+  "cpu_model": "Intel(R) Xeon(R) CPU @ 2.00GHz"
+}

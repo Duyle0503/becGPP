@@ -1,0 +1,49 @@
+S1 gate PASS=True  2D-1/r Eg=3.50e-04 phi0=6.82e-04  2D-log Eg=5.76e-04 phi0=7.44e-04  q2D=1.52e-04  LLL=3.6e-15  3D phi0=2.28e-03  orders={'2D': 1.9349851536271576, '2D_log': 1.9845020682360617, '3D': 1.9633405028050595}
+[S1] done in 0.1 min
+S2 log G_C=2.0: E=4.6861668600 virial_rel=2.32e-05 (old p=0 formula would give 2.13e-01)
+S2 log G_C=5.0: E=5.6781021248 virial_rel=4.86e-05 (old p=0 formula would give 4.40e-01)
+S2 log G_C=10.0: E=7.0324659135 virial_rel=8.81e-05 (old p=0 formula would give 7.11e-01)
+S2 quasi2D l_z=2.0: E=1.9286167808 Egrav=-2.076936 R90=2.6404 virial_rel=1.11e-05
+S2 quasi2D l_z=1.0: E=1.4692427088 Egrav=-2.603774 R90=2.5441 virial_rel=1.50e-05
+S2 quasi2D l_z=0.5: E=1.1101711483 Egrav=-3.050420 R90=2.4568 virial_rel=1.85e-05
+S2 quasi2D l_z=0.25: E=0.8676011955 Egrav=-3.376982 R90=2.3941 virial_rel=2.12e-05
+S2 quasi2D l_z=0.1: E=0.6896870130 Egrav=-3.633243 R90=2.3397 virial_rel=2.35e-05
+S2 quasi2D l_z=0.05: E=0.6231336552 Egrav=-3.733459 R90=2.3205 virial_rel=2.43e-05
+S2 quasi2D l_z=0.0: E=0.5521893114 Egrav=-3.843236 R90=2.2940 virial_rel=2.50e-05
+[S2] done in 0.5 min
+S3 G_C=32: [seed:gaussian] E=-11.67842662 Nv=0 Lz=0.000 R90=1.171 TF=1.074 w_LLL=0.931 conv=True res=9.9e-05 L=6.0 N=160
+S3 G_C=16: [seed:triangular] E=-2.05378936 Nv=1 Lz=1.487 R90=2.107 TF=2.162 w_LLL=0.988 conv=True res=8.7e-05 L=7.8125 N=160
+S3 G_C=10: [seed:gaussian] E=-0.13745302 Nv=12 Lz=6.131 R90=3.834 TF=3.461 w_LLL=0.998 conv=True res=9.8e-05 L=12.5 N=256
+S3 G_C=8: [seed:tf] E=0.27959463 Nv=19 Lz=10.397 R90=4.710 TF=4.325 w_LLL=0.999 conv=True res=1.0e-04 L=15.625 N=320
+S3 G_C=5: [seed:triangular] E=0.72263342 Nv=75 Lz=27.934 R90=7.845 TF=6.922 w_LLL=1.000 conv=False res=6.3e-04 L=25.0 N=512
+[S3] done in 99.4 min
+S4 Omega=0.0: [seed:gaussian] E=5.46245808 Lz=0.000 Nv=0 w_LLL=nan lll_param=nan R90=3.360 TF=3.305 conv=True
+S4 Omega=0.5: [seed:triangular] E=5.27695089 Lz=1.714 Nv=2 w_LLL=0.655 lll_param=7.44 R90=3.497 TF=3.552 conv=True
+S4 Omega=0.7: [seed:gaussian] E=4.68651904 Lz=4.409 Nv=7 w_LLL=0.833 lll_param=10.23 R90=3.932 TF=3.907 conv=True
+S4 Omega=0.85: [seed:triangular] E=3.81948079 Lz=7.891 Nv=14 w_LLL=0.935 lll_param=16.85 R90=4.586 TF=4.552 conv=True
+S4 Omega=0.9: [seed:triangular] E=3.36438680 Lz=10.334 Nv=19 w_LLL=0.963 lll_param=20.65 R90=5.036 TF=5.004 conv=True
+S4 Omega=0.95: [continuation] E=2.72329019 Lz=16.311 Nv=37 w_LLL=0.987 lll_param=30.47 R90=6.149 TF=5.911 conv=True
+[S4] done in 5.2 min
+S5 b2=-25.0: R/xi=1.4 peak/rho0=1.0144 mu/mu_TF-1=+2.736e-01 E/eps-1=+5.718e-01 R90=0.9033 (TF 0.6181)
+S5 b2=-100.0: R/xi=2.8 peak/rho0=1.0570 mu/mu_TF-1=+1.277e-01 E/eps-1=+2.734e-01 R90=0.6933 (TF 0.6181)
+S5 b2=-250.0: R/xi=4.5 peak/rho0=1.0378 mu/mu_TF-1=+7.986e-02 E/eps-1=+1.683e-01 R90=0.6455 (TF 0.6181)
+S5 b2=-1000.0: R/xi=8.9 peak/rho0=1.0193 mu/mu_TF-1=+3.971e-02 E/eps-1=+8.186e-02 R90=0.6204 (TF 0.6181)
+S5 b2=-4000.0: R/xi=17.8 peak/rho0=1.0098 mu/mu_TF-1=+1.983e-02 E/eps-1=+4.030e-02 R90=0.6160 (TF 0.6181)
+[S5] done in 2.6 min
+S6 2D_harmonic         pr: it=   179 t=0.6s E=5.4624579219 res=9.8e-07 converged
+S6 2D_harmonic pr_precond: it=   199 t=0.6s E=5.4624579222 res=9.9e-07 converged
+S6 2D_harmonic       none: it=   300 t=0.9s E=5.4624579222 res=9.9e-07 converged
+S6 2D_lattice_0.9         pr: it=  9868 t=46.7s E=3.3642038263 res=9.8e-07 converged
+S6 2D_lattice_0.9 pr_precond: it= 10399 t=49.4s E=3.3642038172 res=1.0e-06 converged
+S6 2D_lattice_0.9       none: it= 59999 t=276.0s E=3.3645308700 res=1.2e-04 maxit
+S6 3D_selfgrav         pr: it=   748 t=165.0s E=-3.4421491039 res=1.0e-06 converged
+S6 3D_selfgrav pr_precond: it=   134 t=30.6s E=-3.4421491039 res=8.4e-07 converged
+S6 3D_selfgrav       none: it=   657 t=141.6s E=-3.4421491039 res=9.8e-07 converged
+[S6] done in 12.0 min
+S7 GPU (Tesla T4): ns/pt/iter min=68.4 max=107.6 mean=87.0 over 9 grids
+S7 2D N=128: GPU 4.36 ms  CPU 10.18 ms (2 threads)  speedup 2.3x
+S7 2D N=256: GPU 5.04 ms  CPU 43.09 ms (2 threads)  speedup 8.6x
+S7 2D N=384: GPU 9.55 ms  CPU 92.04 ms (2 threads)  speedup 9.6x
+S7 3D N=48: GPU 10.24 ms  CPU 101.35 ms (2 threads)  speedup 9.9x
+S7 3D N=64: GPU 22.26 ms  CPU 332.69 ms (2 threads)  speedup 14.9x
+[S7] done in 3.6 min
