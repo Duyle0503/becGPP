@@ -1,5 +1,31 @@
 # Changelog
 
+## 1.2.0 (2026-09-26)
+
+### Changed
+- **Default `cg_beta` is now `"pr_precond"`** (Polak-Ribiere coefficient in the
+  Sobolev metric of the preconditioner, `beta = <z, g-g_old>/<z_old, g_old>`).
+  On the 2D rotating benchmark it reaches `res_tol=1e-8` in about 250 iterations
+  with about 1.7 energy evaluations per iteration, where `"pr"` needs about 7.9
+  line-search trials per iteration and stalls near 1e-7. Set `cg_beta="pr"` to
+  reproduce 1.0-1.1 (the v1.1 benchmark scripts pin it).
+- The long-range potential `Phi` computed for the accepted line-search trial is
+  reused by the residual and the preconditioner: 1.7 instead of 3.7 zero-padded
+  convolutions per iteration with `"pr_precond"`; iterates are bit-identical.
+
+### Added
+- `record_trace=True` keeps `(wall time, iteration, E, residual)` per iteration
+  in `obs["trace"]` (device-synchronized timings).
+- `benchmarks/kaggle_v12_ma4_timing.py`: time-to-accuracy of PCG (`pr_precond`,
+  `pr`) against imaginary-time split-step at several time steps, on four cases.
+
+## 1.1.1 (2026-09-26)
+
+### Fixed
+- `lll_param` used the intra-LLL spacing `2(1-Omega)` as the gap. The gap to the
+  next Landau level in the rotating frame is `(1+Omega)` (2 hbar*omega at Omega=1),
+  so `lll_param = beta2*n_peak/(1+Omega)`; it is now also reported at `Omega = 1`.
+
 ## 1.1.0 (2026-09-24)
 
 ### Fixed
@@ -24,7 +50,7 @@
 - **Safe defaults**: `Omega=0`, `G_C=0`, `L=10`, `Ngrid=128` (1.0.0 defaulted to
   critical rotation with a long-range term on a 256-point grid).
 - `w_LLL` is reported only for rotating 2D runs in the harmonic trap; new
-  `lll_param = beta2*n_peak / 2(1-Omega)` (the LLL regime needs `lll_param << 1`).
+  `lll_param` (see 1.1.1 for the corrected definition).
 - Validation gate: adds `-ln r` and quasi-2D Gaussian tests and the `-ln r` kernel
   order; 3D threshold tightened from 5e-2 to 5e-3.
 - Triangular seeds are used only for rotating runs (`|Omega| >= 0.3`).

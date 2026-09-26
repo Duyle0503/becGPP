@@ -25,14 +25,12 @@ def diagnostics(psi, G, cfg):
         d.update(Nv=0, Nplus=0, Nminus=0, Nnet=0)
     lll_ok = cfg.get("want_lll", True) and _lll_applicable(G, cfg)
     d["w_LLL"] = lll_weight(psi, G, 60) if lll_ok else float("nan")
-    # Standard mean-field LLL criterion: interaction energy scale beta2*n_peak
-    # compared with the Landau-level gap 2(1 - Omega) (trap units). The LLL
-    # description applies when lll_param << 1.
+    # Standard mean-field LLL criterion (Ho 2001; Fetter 2009): the interaction
+    # energy g*n_peak must be small compared with the gap to the next Landau level,
+    # which in the rotating frame is (1 + Omega) hbar*omega_perp (-> 2 at Omega = 1);
+    # 1 - Omega is the spacing *within* the LLL, not the gap. LLL regime: lll_param << 1.
     O = abs(float(cfg.get("Omega", 0.0)))
-    if lll_ok and O < 1.0:
-        d["lll_param"] = abs(float(cfg["beta2"])) * d["peak"] / (2.0 * (1.0 - O))
-    else:
-        d["lll_param"] = float("inf") if (lll_ok and O >= 1.0) else float("nan")
+    d["lll_param"] = (abs(float(cfg["beta2"])) * d["peak"] / (1.0 + O)) if lll_ok else float("nan")
     tf = extract_tf(cfg, G)
     if tf is not None:
         d.update(tf_kind=tf.get("kind", ""), tf_R90=tf.get("R90", float("nan")),

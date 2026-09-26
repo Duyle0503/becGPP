@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "becgpp"
-version = "1.1.0"
+version = "1.2.0"
 description = "A GPU-accelerated spectral ground-state solver for trapped, rotating and self-gravitating Bose-Einstein condensates in 2D, 3D and quasi-2D."
 readme = "README.md"
 license = { text = "MIT" }

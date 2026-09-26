@@ -13,7 +13,7 @@ import torch
 from .constants import DEV
 from .grid import make_grid, dV, norm_of
 from .interactions import long_range_phi
-from .operators import apply_H, energy_t, compute_residual, observables
+from .operators import apply_H, energy_components, compute_residual, observables
 from .seeds import make_seed
 
 
@@ -25,7 +25,7 @@ def _proj_tangent(v, psi, dv):
     return v - psi * ((psi.conj() * v).sum() * dv)
 
 
-def _preconditioner(grad, psi, G, cfg):
+def _preconditioner(grad, psi, G, cfg, phi=None):
     """Adaptive Sobolev preconditioner: z = (1/2 k^2 + sigma)^-1 grad, with sigma
     the median of the local potential over the bulk. Projected onto the tangent
     space at psi. This shift tracks the actual stiffness (beta2 n dominates),
@@ -34,7 +34,7 @@ def _preconditioner(grad, psi, G, cfg):
     b2, b3, gc = cfg["beta2"], cfg["beta3"], cfg["G_C"]
     local = G["V"] + 2.0 * b2 * rho + 3.0 * b3 * rho**2
     if G["kernel"] != "none" and abs(gc) > 1e-15:
-        local = local + long_range_phi(rho, G, gc)
+        local = local + (phi if phi is not None else long_range_phi(rho, G, gc))
     mask = rho > 0.05 * rho.max()
     vals = local[mask]
     floor = float(cfg.get("precond_shift_min", 0.5))
@@ -67,11 +67,12 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     shrink, growth = 0.5, 1.1
     bb_min, bb_max, bb_mix = 0.05, alpha_max, 0.5
     restart_period = int(cfg.get("cg_restart", 30))
-    # Polak-Ribiere coefficient: "pr" uses the plain gradient,
-    #   beta = <g, g - g_old> / <g_old, g_old>          (default; used for the paper runs)
-    # "pr_precond" uses the preconditioned (Sobolev) inner product,
+    # Polak-Ribiere coefficient:
+    # "pr_precond" (default since 1.2.0) uses the preconditioned (Sobolev) inner product,
     #   beta = <z, g - g_old> / <z_old, g_old>          (standard preconditioned PR)
-    cg_beta = str(cfg.get("cg_beta", "pr")).lower()
+    # "pr" (default in 1.0-1.1, used for the v1.1 paper runs) uses the plain gradient,
+    #   beta = <g, g - g_old> / <g_old, g_old>
+    cg_beta = str(cfg.get("cg_beta", "pr_precond")).lower()
     if cg_beta not in ("pr", "pr_precond", "none"):
         raise ValueError(f"cg_beta must be 'pr', 'pr_precond' or 'none', got {cg_beta!r}")
     # windowed energy convergence: stop when the NET relative energy drop over a
@@ -84,17 +85,27 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     it_ref = 0
     b2, b3, O, gc = cfg["beta2"], cfg["beta3"], cfg["Omega"], cfg["G_C"]
 
-    def residual(p):
-        Hp = apply_H(p, G, cfg)
+    def energy_phi(p):
+        # one zero-padded convolution per call; its potential is reused by the
+        # residual and the preconditioner of the same state (1.2.0)
+        comp = energy_components(p, G, b2, b3, O, gc)
+        return comp["E"].item(), comp["phi"]
+
+    def residual(p, phi=None):
+        Hp = apply_H(p, G, cfg, phi=phi)
         mu = (p.conj() * Hp).sum().real * dv
         g = Hp - mu * p
         ra = torch.sqrt((g.abs()**2).sum() * dv).item()
         return g, mu, ra, ra / max(1.0, abs(mu.item()))
 
-    E = energy_t(psi, G, b2, b3, O, gc).item()
+    E, phi = energy_phi(psi)
     t0 = time.time()
-    grad, mu, _, resid_rel = residual(psi)
-    z, sigma = _preconditioner(grad, psi, G, cfg)
+    # optional convergence history (wall time, iteration, energy, residual); the
+    # .item() calls above/below synchronize the device, so the times are honest
+    record = bool(cfg.get("record_trace", False))
+    trace = [(0.0, 0, E, float("nan"))] if record else None
+    grad, mu, _, resid_rel = residual(psi, phi)
+    z, sigma = _preconditioner(grad, psi, G, cfg, phi)
     direction = z.clone()
     z_prev = z
     converged = False
@@ -107,7 +118,7 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     best_psi = psi.clone()
     E_ref = E
     for it in range(maxit):
-        z, sigma = _preconditioner(grad, psi, G, cfg)
+        z, sigma = _preconditioner(grad, psi, G, cfg, phi)
         if it == 0 or cg_beta == "none" or (restart_period > 0 and it % restart_period == 0):
             beta = 0.0
         else:
@@ -142,10 +153,11 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
         trial = alpha
         psi_t = psi
         Et = E
+        phi_t = phi
         for _ in range(ls_max):
             psi_t = psi - trial * dirc
             psi_t = psi_t / norm_of(psi_t, G)
-            Et = energy_t(psi_t, G, b2, b3, O, gc).item()
+            Et, phi_t = energy_phi(psi_t)
             if math.isfinite(Et) and Et <= E - c1 * trial * gd:
                 accepted = True
                 break
@@ -165,9 +177,12 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
         E_prev = E
         psi = psi_t
         E = Et
+        phi = phi_t
         alpha = min(alpha_max, trial * growth)
         direction = dirc
-        grad, mu, resid_abs, resid_rel = residual(psi)
+        grad, mu, resid_abs, resid_rel = residual(psi, phi)
+        if record:
+            trace.append((time.time() - t0, it + 1, E, resid_rel))
         if resid_rel < best_resid:                       # keep the lowest-residual iterate
             best_resid = resid_rel
             best_psi = psi.clone()
@@ -202,6 +217,8 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     obs.update(iters=it, walltime=time.time() - t0, resid_abs=resid_abs,
                resid_rel=resid_rel, min_resid=best_resid, converged=converged,
                stop_reason=stop, preconditioner_shift=sigma)
+    if record:
+        obs["trace"] = trace
     return psi.detach(), G, obs
 
 

@@ -36,7 +36,7 @@ REPO, TAG = "https://github.com/Duyle0503/becGPP.git", "v1.1.0"
 def _install():
     try:
         import becgpp
-        if becgpp.__version__.startswith("1.1"):
+        if becgpp.__version__.startswith(("1.1", "1.2")):
             return
     except Exception:
         pass
@@ -50,6 +50,11 @@ def _install():
 _install()
 import torch
 import becgpp
+
+# The v1.1 paper runs used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
+# script reproduces them exactly under becGPP >= 1.2 (whose default is "pr_precond").
+import becgpp.config as _bc
+_bc.CFG_DEFAULTS["cg_beta"] = "pr"
 from becgpp import default_cfg, paths, make_grid, ground_state, diagnostics, make_seed
 from becgpp.operators import energy_components
 from becgpp.interactions import long_range_phi, clear_kernel_cache

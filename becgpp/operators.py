@@ -33,11 +33,15 @@ def energy_t(p, G, beta2, beta3, Omega, G_C):
     return energy_components(p, G, beta2, beta3, Omega, G_C)["E"]
 
 
-def apply_H(psi, G, cfg):
+def apply_H(psi, G, cfg, phi=None):
+    """Mean-field Hamiltonian applied to psi. ``phi`` may carry the long-range
+    potential of this same psi (e.g. from ``energy_components``) to avoid
+    recomputing the zero-padded convolution."""
     b2, b3, O, gc = cfg["beta2"], cfg["beta3"], cfg["Omega"], cfg["G_C"]
     kin = torch.fft.ifftn(0.5 * G["K2"] * torch.fft.fftn(psi))
     rho = psi.abs()**2
-    phi = long_range_phi(rho, G, gc) if (G["kernel"] != "none" and abs(gc) > 1e-15) else 0.0
+    if phi is None:
+        phi = long_range_phi(rho, G, gc) if (G["kernel"] != "none" and abs(gc) > 1e-15) else 0.0
     return kin + (G["V"] + b2 * rho + b3 * rho**2 + phi) * psi - O * Lz_op(psi, G)
 
 

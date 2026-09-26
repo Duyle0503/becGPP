@@ -29,7 +29,7 @@ REPO, TAG = "https://github.com/Duyle0503/becGPP.git", "v1.1.0"
 def _install():
     try:
         import becgpp
-        if becgpp.__version__.startswith("1.1"):
+        if becgpp.__version__.startswith(("1.1", "1.2")):
             return
     except Exception:
         pass
@@ -43,8 +43,13 @@ def _install():
 _install()
 import torch
 import becgpp
+
+# The v1.1 paper runs used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
+# script reproduces them exactly under becGPP >= 1.2 (whose default is "pr_precond").
+import becgpp.config as _bc
+_bc.CFG_DEFAULTS["cg_beta"] = "pr"
 from becgpp import default_cfg, run, paths, make_grid, ground_state, diagnostics
-assert becgpp.__version__.startswith("1.1"), f"need becGPP 1.1.x, got {becgpp.__version__}"
+assert becgpp.__version__.startswith(("1.1", "1.2")), f"need becGPP >= 1.1, got {becgpp.__version__}"
 
 ROOT = "/kaggle/working/v11_step2" if os.path.isdir("/kaggle/working") else os.path.abspath("v11_step2")
 os.makedirs(ROOT, exist_ok=True)
@@ -264,6 +269,7 @@ def s6_pcg_variants():
 # ---------------------------------------------------------------------------- S7
 WORKER = textwrap.dedent('''
     import sys, json, time, torch, becgpp
+    import becgpp.config as _bc; _bc.CFG_DEFAULTS["cg_beta"] = "pr"   # as in the v1.1 runs
     from becgpp import default_cfg, make_grid
     from becgpp.solvers import ground_state
     from becgpp.interactions import clear_kernel_cache

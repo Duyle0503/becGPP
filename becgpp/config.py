@@ -43,8 +43,9 @@ CFG_DEFAULTS = dict(
     step_max     = 3.0,            # upper clamp of the (Barzilai-Borwein) trial step
     linesearch_max = 8,            # Armijo halvings per iteration
     precond_shift_min = 0.5,       # lower bound on the adaptive Sobolev shift sigma
-    cg_beta      = "pr",           # pr | pr_precond | none   (Polak-Ribiere variant)
+    cg_beta      = "pr_precond",   # pr_precond | pr | none  (Polak-Ribiere variant; 1.0-1.1 default: pr)
     cg_restart   = 30,             # reset the CG direction every cg_restart steps
+    record_trace = False,          # keep (time, iteration, E, residual) per iteration in obs["trace"]
     check        = 200,
 
     # ---- seeding ----
