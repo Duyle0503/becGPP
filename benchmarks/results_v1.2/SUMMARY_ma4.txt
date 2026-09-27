@@ -1,0 +1,20 @@
+A_2D_harmonic (E_ref=5.462457921846):
+   PCG-pp  t(1e-4)=0.17s t(1e-5)=0.22s t(1e-6)=0.26s  final rel err=+0.0e+00 [321 it/steps, converged]
+   PCG-pr  t(1e-4)=0.10s t(1e-5)=0.14s t(1e-6)=0.17s  final rel err=+1.5e-15 [270 it/steps, converged]
+   ITP     t(1e-4)=0.02s t(1e-5)=0.02s t(1e-6)=0.03s  final rel err=+3.8e-08 [100 it/steps, reached_stop_tol]
+   ITP dt-extrapolated energy (last two stages): rel diff +nan
+B_2D_lattice_0.9 (E_ref=3.364203811849):
+   PCG-pp  t(1e-4)=17.10s t(1e-5)=24.25s t(1e-6)=27.56s  final rel err=+2.3e-12 [19999 it/steps, maxit]
+   PCG-pr  t(1e-4)=18.31s t(1e-5)=25.15s t(1e-6)=28.57s  final rel err=+0.0e+00 [19999 it/steps, maxit]
+   ITP     t(1e-4)=nans t(1e-5)=nans t(1e-6)=nans  final rel err=+4.6e-04 [160000 it/steps, stages_done]
+   ITP dt-extrapolated energy (last two stages): rel diff +4.64e-04
+C_3D_harmonic (E_ref=3.562388156892):
+   PCG-pp  t(1e-4)=0.38s t(1e-5)=0.55s t(1e-6)=0.71s  final rel err=+0.0e+00 [200 it/steps, converged]
+   PCG-pr  t(1e-4)=0.40s t(1e-5)=0.57s t(1e-6)=0.87s  final rel err=+7.5e-16 [179 it/steps, converged]
+   ITP     t(1e-4)=0.22s t(1e-5)=0.33s t(1e-6)=0.45s  final rel err=+3.5e-08 [125 it/steps, reached_stop_tol]
+   ITP dt-extrapolated energy (last two stages): rel diff +nan
+D_3D_selfgrav (E_ref=-3.438939917472):
+   PCG-pp  t(1e-4)=2.63s t(1e-5)=3.57s t(1e-6)=3.83s  final rel err=+0.0e+00 [19999 it/steps, maxit]
+   PCG-pr  t(1e-4)=7.76s t(1e-5)=11.57s t(1e-6)=15.51s  final rel err=+1.8e-15 [726 it/steps, converged]
+   ITP     t(1e-4)=1.08s t(1e-5)=1.62s t(1e-6)=1.62s  final rel err=+4.6e-08 [100 it/steps, reached_stop_tol]
+   ITP dt-extrapolated energy (last two stages): rel diff +nan

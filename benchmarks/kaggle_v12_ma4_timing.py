@@ -1,7 +1,13 @@
 # =============================================================================
 #  becGPP v1.2 -- MA-4: like-for-like time to solution, becGPP (PCG) vs an
 #  independent imaginary-time split-step solver (ITP), on the same GPU
-#  (Kaggle, ONE cell, GPU accelerator ON; ~40-70 min on a T4)
+#  (Kaggle, ONE cell, GPU accelerator ON; ~30-50 min on a T4 for all four cases)
+#  v1.2.1 of this script: ITP holds the potential V(psi_n) over each symmetric
+#  split step -- ONE long-range convolution per step instead of two, and a smaller
+#  dt-bias than re-evaluating V at the half step (this favours ITP, so the timing
+#  comparison is conservative); ITP stops once it is
+#  1e-7 below the finest target or after ITP_BUDGET_S; PCG reference to res 1e-8
+#  (E error ~ res^2, far below 1e-6). Set RUN_CASES to rerun only some cases.
 # -----------------------------------------------------------------------------
 #  Answers referee point MA-4: in the v1.1 comparison becGPP was timed to a
 #  residual of 1e-5 and ITP to an energy error of 1e-5. Here BOTH methods are
@@ -10,11 +16,12 @@
 #  convergence history (becGPP: cfg record_trace=True; ITP: every 25 steps).
 #
 #  E_ref = lowest energy found by any method at the tightest settings (the
-#  becGPP runs to residual 1e-9). Methods:
+#  becGPP runs to residual 1e-8). Methods:
 #     PCG-pp : becGPP, cg_beta="pr_precond"  (default since 1.2.0)
 #     PCG-pr : becGPP, cg_beta="pr"          (default in 1.0-1.1, used for the v1.1 paper runs)
 #     ITP    : Strang split-step normalized gradient flow, dt = 0.02 -> 0.005 ->
-#              0.00125 -> 0.0003125 (rotation by x/y alternating directions)
+#              0.00125 -> 0.0003125 (rotation by x/y alternating directions),
+#              potential V(psi_n) held over each step
 #  All start from the SAME seed; kernel caches are warmed before timing.
 #
 #  Cases (trap units), identical to the v1.1 step-4 run:
@@ -54,6 +61,11 @@ from becgpp import default_cfg, paths, make_grid, ground_state, make_seed
 from becgpp.operators import energy_components
 from becgpp.interactions import long_range_phi, clear_kernel_cache
 
+# ---- user knobs -------------------------------------------------------------
+RUN_CASES = ("A", "B", "C", "D")   # e.g. ("D",) to rerun only the self-gravitating case
+ITP_BUDGET_S = 1800.0             # wall-time cap per ITP run (a miss is reported as > budget)
+STOP_TOL = 1e-7                   # ITP stops once |E-E_ref|/|E_ref| < STOP_TOL (below all targets)
+# ------------------------------------------------------------------------------
 assert becgpp.__version__.startswith("1.2"), f"need becGPP 1.2.x (record_trace), got {becgpp.__version__}"
 DEV = becgpp.DEV
 ROOT = "/kaggle/working/v12_ma4" if os.path.isdir("/kaggle/working") else os.path.abspath("v12_ma4")
@@ -105,12 +117,15 @@ class ITP:
         self.X, self.Y = G["coords"][0], G["coords"][1]
         self.dv = dx ** self.ndim
 
-    def _nonlin(self, psi):
+    def _nonlin(self, psi, phi=None):
+        """Local potential; the long-range part is convolved only when phi is None."""
         rho = psi.abs() ** 2
         V = self.G["V"] + self.b2 * rho + self.b3 * rho ** 2
         if self.gc != 0.0 and self.G["kernel"] != "none":
-            V = V + long_range_phi(rho, self.G, self.gc)
-        return V
+            if phi is None:
+                phi = long_range_phi(rho, self.G, self.gc)
+            V = V + phi
+        return V, phi
 
     def _kin(self, psi, dt):
         k = self.k
@@ -137,7 +152,8 @@ class ITP:
     def energy(self, psi):
         return energy_components(psi, self.G, self.b2, self.b3, self.O, self.gc)["E"].item()
 
-    def run(self, psi, dts, etol=1e-11, check=25, maxsteps=40000):
+    def run(self, psi, dts, E_ref=None, stop_tol=None, budget=float("inf"),
+            etol=1e-11, check=25, maxsteps=40000):
         """Returns final psi, list of stage-final energies, and the history
         [(wall time, step, E)] sampled every `check` steps (timer excludes nothing:
         the energy evaluations are part of the method's cost, as for becGPP)."""
@@ -146,23 +162,37 @@ class ITP:
         t0 = time.time()
         steps = 0
         E_stage = []
+        stop = "stages_done"
         for dt in dts:
             E_old = hist[-1][2]
             n = 0
             while n < maxsteps:
                 for _ in range(check):
-                    psi = psi * torch.exp(-0.5 * dt * self._nonlin(psi))
-                    psi = self._kin(psi, dt)
-                    psi = self._normalize(psi * torch.exp(-0.5 * dt * self._nonlin(psi)))
+                    # symmetric split step with the potential V(psi_n) held over the
+                    # step: one long-range convolution per step, and a fixed point
+                    # with a smaller dt-bias than re-evaluating V at the half step
+                    V, _ = self._nonlin(psi)
+                    psi = self._kin(psi * torch.exp(-0.5 * dt * V), dt)
+                    psi = self._normalize(psi * torch.exp(-0.5 * dt * V))
                 n += check
                 steps += check
                 E = self.energy(psi)                    # .item() synchronizes
-                hist.append((time.time() - t0, steps, E))
+                t = time.time() - t0
+                hist.append((t, steps, E))
+                if E_ref is not None and stop_tol is not None and abs(E - E_ref) <= stop_tol * abs(E_ref):
+                    stop = "reached_stop_tol"
+                    break
+                if t > budget:
+                    stop = "budget"
+                    break
                 if abs(E - E_old) <= etol * max(1.0, abs(E)):
                     break
                 E_old = E
             E_stage.append(hist[-1][2])
-        return psi, E_stage, hist
+            print(f"      ITP dt={dt:g}: E={hist[-1][2]:.12f} steps={steps} t={hist[-1][0]:.0f}s", flush=True)
+            if stop != "stages_done":
+                break
+        return psi, E_stage, hist, stop
 
 
 def first_time(hist, E_ref, tol):
@@ -172,7 +202,7 @@ def first_time(hist, E_ref, tol):
     return float("nan")
 
 
-CASES = [
+CASES_ALL = [
     ("A_2D_harmonic", dict(dimension="2D", s=2, Omega=0.0, beta2=200, G_C=0, kernel="none",
                            L=10, Ngrid=256, seed="tf")),
     ("B_2D_lattice_0.9", dict(dimension="2D", s=2, Omega=0.9, beta2=200, G_C=0, kernel="none",
@@ -182,30 +212,54 @@ CASES = [
     ("D_3D_selfgrav", dict(dimension="3D", s=2, Omega=0.0, beta2=100, G_C=20, kernel="newton",
                            L=8, Ngrid=96, seed="tf")),
 ]
+CASES = [c for c in CASES_ALL if c[0][0] in RUN_CASES]
 DTS = (0.02, 0.005, 0.00125, 0.0003125)
+
+def write(path, rr):
+    keys = list(dict.fromkeys(k for r in rr for k in r))
+    with open(path, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=keys)
+        w.writeheader()
+        w.writerows(rr)
+
+
+def save_tables():
+    """Written after every case, so an interrupted run keeps the finished cases."""
+    tag = "".join(RUN_CASES)
+    sfx = "" if tag == "ABCD" else f"_{tag}"
+    write(os.path.join(ROOT, f"ma4_timing{sfx}.csv"), rows)
+    write(os.path.join(ROOT, f"ma4_traces{sfx}.csv"), traces)
+    open(os.path.join(ROOT, f"SUMMARY{sfx}.txt"), "w").write("\n".join(SUMMARY) + "\n")
+
 
 hardware()
 rows, traces = [], []
 for name, kw in CASES:
-    base = default_cfg(mode="single", beta3=0.0, rng=0, nseeds=1, res_tol=1e-9, maxit=20000,
+    base = default_cfg(mode="single", beta3=0.0, rng=0, nseeds=1, res_tol=1e-8, maxit=20000,
                        record_trace=True, show_inline=False, save_figs=False, save_ckpt=False, **kw)
     G = make_grid(base)
     psi0 = make_seed(G, base)                      # identical starting state for every method
     ground_state(dict(base, maxit=3), G=G, psi0=psi0.clone(), verbose=False)   # warm caches
     runs = {}
     for label, beta in (("PCG-pp", "pr_precond"), ("PCG-pr", "pr")):
+        print(f"   {name}: {label} ...", flush=True)
         sync()
         psi, _, obs = ground_state(dict(base, cg_beta=beta), G=G, psi0=psi0.clone(), verbose=False)
         runs[label] = dict(E=obs["E"], hist=[(t, it, E) for t, it, E, _ in obs["trace"]],
                            iters=obs["iters"], resid=obs["resid_rel"], stop=obs["stop_reason"])
         del psi
-    itp = ITP(base, G)
-    psi, E_stage, hist = itp.run(psi0.clone(), DTS)
-    d1, d2 = DTS[-2], DTS[-1]
-    E_itp_ex = (E_stage[-1] * d1 ** 2 - E_stage[-2] * d2 ** 2) / (d1 ** 2 - d2 ** 2)
-    runs["ITP"] = dict(E=E_stage[-1], hist=hist, iters=hist[-1][1], resid=float("nan"),
-                       stop="stages_done", E_extrap=E_itp_ex)
     E_ref = min(runs["PCG-pp"]["E"], runs["PCG-pr"]["E"])
+    print(f"   {name}: ITP ...", flush=True)
+    itp = ITP(base, G)
+    psi, E_stage, hist, itp_stop = itp.run(psi0.clone(), DTS, E_ref=E_ref, stop_tol=STOP_TOL,
+                                           budget=ITP_BUDGET_S)
+    if len(E_stage) >= 2:
+        d1, d2 = DTS[len(E_stage) - 2], DTS[len(E_stage) - 1]
+        E_itp_ex = (E_stage[-1] * d1 ** 2 - E_stage[-2] * d2 ** 2) / (d1 ** 2 - d2 ** 2)
+    else:
+        E_itp_ex = float("nan")
+    runs["ITP"] = dict(E=E_stage[-1], hist=hist, iters=hist[-1][1], resid=float("nan"),
+                       stop=itp_stop, E_extrap=E_itp_ex)
     for label, r in runs.items():
         row = dict(case=name, method=label, N=G["N"], E_final=r["E"], E_ref=E_ref,
                    rel_err_final=(r["E"] - E_ref) / abs(E_ref), iters_or_steps=r["iters"],
@@ -223,30 +277,23 @@ for name, kw in CASES:
                    f"t(1e-6)={r['t_to_1e-06']:.2f}s  final rel err={r['rel_err_final']:+.1e} "
                    f"[{r['iters_or_steps']} it/steps, {r['stop']}]")
     note("\n".join(msg))
-    note(f"   ITP dt-extrapolated energy: rel diff {(E_itp_ex - E_ref) / abs(E_ref):+.2e}")
+    note(f"   ITP dt-extrapolated energy (last two stages): rel diff {(E_itp_ex - E_ref) / abs(E_ref):+.2e}")
+    save_tables()
     del psi, psi0
     clear_kernel_cache()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-
-def write(path, rr):
-    keys = list(dict.fromkeys(k for r in rr for k in r))
-    with open(path, "w", newline="") as f:
-        w = csv.DictWriter(f, fieldnames=keys)
-        w.writeheader()
-        w.writerows(rr)
-
-
-write(os.path.join(ROOT, "ma4_timing.csv"), rows)
-write(os.path.join(ROOT, "ma4_traces.csv"), traces)
+save_tables()
 
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 plt.rcParams.update({"font.size": 10, "font.family": "serif", "mathtext.fontset": "cm",
                      "xtick.direction": "in", "ytick.direction": "in", "legend.frameon": False})
-fig, axs = plt.subplots(2, 2, figsize=(7.2, 5.6))
+nc = len(CASES)
+fig, axs = plt.subplots(2 if nc > 2 else 1, 2 if nc > 1 else 1, figsize=(7.2, 5.6 if nc > 2 else 2.9),
+                        squeeze=False)
 style = {"PCG-pp": ("-", "#1f5c8b"), "PCG-pr": ("--", "#6a9fcb"), "ITP": ("-", "#b3282d")}
 for ax, (name, _) in zip(axs.ravel(), CASES):
     for m, (ls, col) in style.items():
@@ -262,9 +309,8 @@ for ax, (name, _) in zip(axs.ravel(), CASES):
 axs[0, 0].legend(fontsize=7.5)
 fig.tight_layout()
 for ext in ("pdf", "png"):
-    fig.savefig(os.path.join(ROOT, f"fig_ma4_convergence.{ext}"), dpi=150)
+    fig.savefig(os.path.join(ROOT, f"fig_ma4_convergence{'' if ''.join(RUN_CASES) == 'ABCD' else '_' + ''.join(RUN_CASES)}.{ext}"), dpi=150)
 
-open(os.path.join(ROOT, "SUMMARY.txt"), "w").write("\n".join(SUMMARY) + "\n")
 arch = shutil.make_archive("/kaggle/working/becgpp_v12_ma4" if os.path.isdir("/kaggle/working")
                            else os.path.abspath("becgpp_v12_ma4"), "zip", root_dir=ROOT)
 print("\n" + "=" * 78 + "\n" + "\n".join(SUMMARY) + f"\n\nArchive: {arch}")
