@@ -9,7 +9,7 @@ import torch
 torch.set_default_dtype(torch.float64)
 
 DEV = "cuda" if torch.cuda.is_available() else "cpu"
-CODE_VERSION = "becGPP_1.2"
+CODE_VERSION = "becGPP_1.2.1"
 
 # --- SI physical constants (used only by the optional unit-conversion helpers) ---
 HBAR = 1.054571817e-34       # J s

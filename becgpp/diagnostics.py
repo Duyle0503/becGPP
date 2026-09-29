@@ -24,7 +24,7 @@ def diagnostics(psi, G, cfg):
     else:
         d.update(Nv=0, Nplus=0, Nminus=0, Nnet=0)
     lll_ok = cfg.get("want_lll", True) and _lll_applicable(G, cfg)
-    d["w_LLL"] = lll_weight(psi, G, 60) if lll_ok else float("nan")
+    d["w_LLL"] = lll_weight(psi, G, 60, float(cfg.get("Omega", 0.0))) if lll_ok else float("nan")
     # Standard mean-field LLL criterion (Ho 2001; Fetter 2009): the interaction
     # energy g*n_peak must be small compared with the gap to the next Landau level,
     # which in the rotating frame is (1 + Omega) hbar*omega_perp (-> 2 at Omega = 1);

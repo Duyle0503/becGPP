@@ -8,7 +8,7 @@
 # ---- Cell 1 -- install the package straight from GitHub -----------------
 # (double precision + GPU auto-select; the only run-time deps are torch/numpy/matplotlib,
 #  which Kaggle already ships, so the install is fast.)
-!pip install -q git+https://github.com/Duyle0503/becGPP.git@v1.1.1
+!pip install -q git+https://github.com/Duyle0503/becGPP.git@v1.2.1
 
 import becgpp
 from becgpp import default_cfg, run, paths

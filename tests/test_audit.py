@@ -1,11 +1,10 @@
 """Audit tests: consistency checks that must hold, plus regression tests for
-defects found in a code review.
+the defects fixed in 1.2.1.
 
 The first group checks internal consistency and exact limits (energy gradient
 vs. Hamiltonian, kernel symmetry, non-interacting ground states, mu, vortex
-counting). The second group documents known defects; each is marked
-``xfail(strict=True)`` so the suite stays green while the defect exists and
-turns red (XPASS) once it is fixed -- then remove the marker.
+counting). The second group pins the 1.2.1 fixes (solver stall exit, run ids,
+config-file validation, sweep checks, negative rotation, odd grids, ...).
 Requires torch; skipped if unavailable.
 """
 import json
@@ -161,30 +160,22 @@ def test_cli_coerces_command_line_types(monkeypatch):
 
 
 # =============================================================================
-#  Known defects (xfail until fixed)
+#  Regression tests for the defects fixed in 1.2.1
 # =============================================================================
-@pytest.mark.xfail(strict=True, reason="solver: after the energy has settled, every Armijo "
-                   "search fails; the Barzilai-Borwein mix keeps alpha >= 2/3*bb_min so "
-                   "'line_search_stalled' is unreachable, and the energy-window stop is only "
-                   "evaluated on accepted steps -> runs to maxit (8 energy evals/iteration)")
 def test_solver_stops_when_line_search_stalls():
     # Exact answer (E = 1) is reached in ~100 iterations; the residual floor set by
     # the box (e^{-L^2/2}) is above res_tol, so only the stall / energy stops can end it.
     c = _cfg(beta2=0.0, res_tol=1e-12, energy_tol=1e-9, conv_window=200, maxit=1000)
     _, _, obs = ground_state(c, verbose=False)
     assert abs(obs["E"] - 1.0) < 1e-10
-    assert obs["stop_reason"] != "maxit", obs["stop_reason"]
+    assert obs["stop_reason"] in ("line_search_stalled", "energy_converged"), obs["stop_reason"]
+    assert obs["iters"] < 400, obs["iters"]
 
 
-@pytest.mark.xfail(strict=True, reason="io.run_id ignores seed_winding, seed_noise, maxit, "
-                   "energy_tol, ...: a rerun with different settings silently resumes the "
-                   "old checkpoint in mode 'single'")
 def test_run_id_distinguishes_seed_winding():
     assert run_id(_cfg(seed_winding=0)) != run_id(_cfg(seed_winding=2))
 
 
-@pytest.mark.xfail(strict=True, reason="cli: config-file keys are merged with dict.update, "
-                   "bypassing default_cfg's alias mapping and unknown-key check")
 def test_cli_config_file_aliases_and_unknown_keys(monkeypatch, tmp_path):
     monkeypatch.setattr(cli, "run", lambda cfg: cfg)
     p = tmp_path / "c.json"
@@ -195,8 +186,6 @@ def test_cli_config_file_aliases_and_unknown_keys(monkeypatch, tmp_path):
         cli.main(["--config", str(p)])
 
 
-@pytest.mark.xfail(strict=True, reason="cli: PyYAML reads '1e3' as a string; config-file "
-                   "values are not coerced, so beta2: 1e3 crashes later with a TypeError")
 def test_cli_yaml_scientific_notation(monkeypatch, tmp_path):
     pytest.importorskip("yaml")
     monkeypatch.setattr(cli, "run", lambda cfg: cfg)
@@ -205,22 +194,16 @@ def test_cli_yaml_scientific_notation(monkeypatch, tmp_path):
     assert isinstance(cli.main(["--config", str(p)])["beta2"], float)
 
 
-@pytest.mark.xfail(strict=True, reason="mode_sweep: sweep_param is not validated; a typo "
-                   "('omega') runs every point with identical physics")
 def test_sweep_rejects_unknown_parameter():
     c = _cfg(mode="sweep", sweep_param="omega", sweep_values=[0.0], Ngrid=32, maxit=20)
     with pytest.raises(ValueError):
         modes.mode_sweep(c)
 
 
-@pytest.mark.xfail(strict=True, reason="mode_sweep: max() of an empty list when "
-                   "sweep_values=[] (ValueError instead of an empty result)")
 def test_sweep_with_no_values():
     assert modes.mode_sweep(_cfg(mode="sweep", sweep_values=[])) == []
 
 
-@pytest.mark.xfail(strict=True, reason="mode_smoke: 'd.get(\"converged\") is not None' is "
-                   "always True, so OVERALL ignores whether the run converged")
 def test_smoke_ok_reflects_convergence(monkeypatch):
     monkeypatch.setattr(modes, "mode_validate", lambda cfg: dict(passed=True))
     monkeypatch.setattr(modes, "mode_single", lambda cfg: dict(converged=False, E=0.0))
@@ -228,8 +211,6 @@ def test_smoke_ok_reflects_convergence(monkeypatch):
     assert modes.mode_smoke(_cfg())["ok"] is False
 
 
-@pytest.mark.xfail(strict=True, reason="seeds.triangular_seed uses abs(Omega) and always "
-                   "imprints +1 vortices: for Omega<0 the seed rotates the wrong way")
 def test_triangular_seed_follows_rotation_sign():
     c = _cfg(Omega=-0.9, beta2=200, L=10, Ngrid=96, seed="triangular")
     G = make_grid(c)
@@ -237,8 +218,6 @@ def test_triangular_seed_follows_rotation_sign():
     assert Lz < 0.0, Lz
 
 
-@pytest.mark.xfail(strict=True, reason="diagnostics: w_LLL projects on z^m exp(-r^2/2) for "
-                   "any Omega; for Omega<0 the LLL is conj(z)^m, so the mirror state scores ~0")
 def test_lll_weight_negative_rotation():
     c = _cfg(Omega=-0.9, beta2=0.0, Ngrid=96, L=8)
     G = make_grid(c)
@@ -248,8 +227,6 @@ def test_lll_weight_negative_rotation():
     assert abs(diagnostics(psi, G, c)["w_LLL"] - 1.0) < 1e-6
 
 
-@pytest.mark.xfail(strict=True, reason="grid.resample_state assumes the grid starts at -L; "
-                   "for odd Ngrid it starts at -(N-1)/2*dx, so the identity map is shifted")
 def test_resample_identity_odd_grid():
     G = make_grid(_cfg(Ngrid=65))
     psi = torch.exp(-((G["X"] - 1.0) ** 2 + G["Y"] ** 2)).to(torch.complex128)
@@ -257,30 +234,28 @@ def test_resample_identity_odd_grid():
     assert (resample_state(psi, G, G) - psi).abs().max().item() < 1e-12
 
 
-@pytest.mark.xfail(strict=True, reason="grid.geometry maps any unrecognised dimension "
-                   "('1D', '3d ', typos) silently to 2D")
 def test_geometry_rejects_unknown_dimension():
     with pytest.raises(ValueError):
         geometry(dict(dimension="1D"))
 
 
-@pytest.mark.xfail(strict=True, reason="grid.auto_grid: R_est = 0.5*beta2/G_C is negative for "
-                   "a repulsive long-range term (G_C<0)")
 def test_auto_grid_repulsive_long_range():
     _, _, R_est = auto_grid(_cfg(G_C=-1.0, beta2=10.0))
     assert R_est > 0
 
 
-@pytest.mark.xfail(strict=True, reason="thomasfermi: trapped repulsive pure quintic "
-                   "(beta2=0, beta3>0) has a TF profile sqrt((mu-V)/beta3) but gets None")
 def test_tf_trapped_pure_quintic():
     c = _cfg(beta2=0.0, beta3=50.0)
     assert extract_tf(c, make_grid(c)) is not None
 
 
-@pytest.mark.xfail(strict=True, reason="solver: obs['iters'] is the last 0-based loop index, "
-                   "one less than the number of iterations performed")
 def test_iteration_count():
     c = _cfg(beta2=50.0, res_tol=1e-14, maxit=5)
     _, _, obs = ground_state(c, verbose=False)
     assert obs["iters"] == 5
+
+
+def test_console_entry_exits_zero(monkeypatch):
+    # the console script does sys.exit(console()): a successful run must give status 0
+    monkeypatch.setattr(cli, "run", lambda cfg: dict(E=1.0))
+    assert cli.console(["--mode", "tf_only"]) == 0

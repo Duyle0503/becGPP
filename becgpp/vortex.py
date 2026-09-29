@@ -38,7 +38,7 @@ def _count_vortices_2d(psi2d, X2d, Y2d, dx, Omega=1.0, dens_thresh_frac=0.15):
     k = 2 * math.pi * torch.fft.fftfreq(N, d=dx).to(psi2d.device)
     KX, KY = torch.meshgrid(k, k, indexing="ij")
     K2 = KX**2 + KY**2
-    ell = min(2.0 * math.sqrt(math.pi / max(Omega, 1e-9)), max(R / 3.0, 2.0 * dx))
+    ell = min(2.0 * math.sqrt(math.pi / max(abs(Omega), 1e-9)), max(R / 3.0, 2.0 * dx))
     nbar = torch.clamp(torch.fft.ifftn(torch.fft.fftn(rho) * torch.exp(-0.5 * ell**2 * K2)).real, min=0.0)
     cell = 0.25 * (nbar[:-1, :-1] + nbar[1:, :-1] + nbar[1:, 1:] + nbar[:-1, 1:])
     rc = torch.sqrt((X2d[:-1, :-1] - xcm)**2 + (Y2d[:-1, :-1] - ycm)**2)
@@ -58,13 +58,15 @@ def vortex_diagnostic(psi, G, Omega=1.0, dens_thresh_frac=0.15):
                               G["dx"], Omega, dens_thresh_frac)
 
 
-def lll_weight(psi, G, Mmax=60):
+def lll_weight(psi, G, Mmax=60, Omega=1.0):
+    """Weight of psi in the lowest Landau level of the rotating harmonic trap:
+    the states z^m exp(-r^2/2) for Omega > 0, conj(z)^m exp(-r^2/2) for Omega < 0."""
     if G["ndim"] != 2:
         return float("nan")
     dv = dV(G)
     psi_n = psi / norm_of(psi, G)
     r = torch.sqrt(G["R2"])
-    theta = torch.atan2(G["Y"], G["X"])
+    theta = torch.atan2(G["Y"], G["X"]) * (1.0 if Omega >= 0 else -1.0)
     r2mean = (G["R2"] * psi_n.abs()**2).sum().item() * dv
     estimate = int(math.ceil(r2mean + 10.0 * math.sqrt(max(r2mean, 1.0)) + 30.0))
     Mcap = min(max(int(Mmax), estimate), max(int(Mmax), int((0.80 * G["L"])**2)))

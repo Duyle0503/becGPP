@@ -33,7 +33,7 @@ from .modes import (run, DISPATCH, zip_results,
                     mode_validate, mode_smoke, mode_single, mode_tf_only,
                     mode_sweep, mode_convergence)
 
-__version__ = "1.2.0"
+__version__ = "1.2.1"
 
 __all__ = [
     "CODE_VERSION", "DEV", "CFG_DEFAULTS", "default_cfg", "paths",

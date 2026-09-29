@@ -8,13 +8,16 @@ from .constants import DEV
 
 
 def geometry(cfg):
-    """Return (ndim, quasi) for the configured geometry."""
-    g = str(cfg.get("dimension", "2D")).lower()
+    """Return (ndim, quasi) for the configured geometry: "2D", "3D" or "quasi2D"
+    (case-insensitive)."""
+    g = str(cfg.get("dimension", "2D")).strip().lower()
+    if g == "2d":
+        return 2, False
     if g == "3d":
         return 3, False
     if g == "quasi2d":
         return 2, True
-    return 2, False
+    raise ValueError(f"unknown dimension {cfg.get('dimension')!r}; use '2D', '3D' or 'quasi2D'")
 
 
 def resolve_kernel(cfg):
@@ -119,8 +122,8 @@ def auto_grid(cfg):
     b3 = float(cfg["beta3"])
     gc = float(cfg["G_C"])
     ndim, _ = geometry(cfg)
-    if abs(gc) > 1e-15 and b2 > 0:
-        R_est = 0.5 * b2 / gc                              # gravitylike-ish 1/gamma
+    if gc > 1e-15 and b2 > 0:
+        R_est = 0.5 * b2 / gc                              # attractive long range: ~ 1/gamma
     elif b2 < 0 and b3 > 0:
         rho0 = max(-3 * b2 / (4 * b3), 1e-6)
         R_est = 1.0 / math.sqrt(math.pi * rho0) if ndim == 2 else (3 / (4 * math.pi * rho0))**(1 / 3)
@@ -139,8 +142,9 @@ def resample_state(psi_old, G_old, G_new):
     for gamma-continuation across box sizes. Renormalized on the new grid; returns
     None if the interpolation is degenerate."""
     d = G_old["ndim"]
-    x0 = -float(G_old["L"])
-    x1 = float(G_old["L"]) - float(G_old["dx"])
+    n_old, dx_old = int(G_old["N"]), float(G_old["dx"])
+    x0 = -(n_old // 2) * dx_old                    # first/last node, as in make_grid
+    x1 = x0 + (n_old - 1) * dx_old                 # (x0 = -L only for even N)
     if not (x1 > x0):
         return None
     nrm = [2.0 * (c - x0) / (x1 - x0) - 1.0 for c in G_new["coords"]]   # normalized new coords

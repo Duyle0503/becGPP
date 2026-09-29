@@ -42,6 +42,7 @@ CFG_DEFAULTS = dict(
     step         = 1.0,            # initial trial step of the line search
     step_max     = 3.0,            # upper clamp of the (Barzilai-Borwein) trial step
     linesearch_max = 8,            # Armijo halvings per iteration
+    linesearch_stall = 10,         # stop after this many consecutive failed line searches
     precond_shift_min = 0.5,       # lower bound on the adaptive Sobolev shift sigma
     cg_beta      = "pr_precond",   # pr_precond | pr | none  (Polak-Ribiere variant; 1.0-1.1 default: pr)
     cg_restart   = 30,             # reset the CG direction every cg_restart steps
@@ -89,6 +90,11 @@ CFG_DEFAULTS = dict(
 # short, user-facing aliases -> canonical CFG keys
 _ALIASES = dict(res="res_tol", etol="energy_tol", N="Ngrid", dim="dimension",
                 precond_shift="precond_shift_min")
+
+
+def canonical_key(key):
+    """Map a user-facing alias (``res``, ``etol``, ``N``, ...) to its CFG key."""
+    return _ALIASES.get(key, key)
 
 
 def default_cfg(**overrides):

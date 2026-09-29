@@ -10,6 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from . import paths
+from .config import CFG_DEFAULTS, canonical_key
 from .constants import DEV, CODE_VERSION
 from .grid import make_grid, geometry, dV, norm_of, resolve_kernel, auto_grid, resample_state
 from .interactions import long_range_phi
@@ -310,14 +311,26 @@ def mode_sweep(cfg):
     fast rotation); fresh seeds alone lose the warm start. Using both and keeping
     the lower energy makes a sweep follow the ground-state branch.
     """
-    param = cfg.get("sweep_param", "G_C")
+    param = canonical_key(cfg.get("sweep_param", "G_C"))
+    tmpl = CFG_DEFAULTS.get(param)
+    if param not in CFG_DEFAULTS or isinstance(tmpl, bool) or not isinstance(tmpl, (int, float)):
+        numeric = sorted(k for k, v in CFG_DEFAULTS.items()
+                         if isinstance(v, (int, float)) and not isinstance(v, bool))
+        raise ValueError(f"sweep_param={cfg.get('sweep_param')!r} is not a numeric CFG key; "
+                         f"choose one of {numeric}")
     values = list(cfg.get("sweep_values", []))
+    bad = [v for v in values if isinstance(v, bool) or not isinstance(v, (int, float))]
+    if bad:
+        raise ValueError(f"sweep_values must be numbers, got {bad}")
     use_cont = bool(cfg.get("sweep_continuation", True))
     tag0 = cfg.get("tag", "becgpp")
     stem = param if tag0 == "becgpp" else f"{tag0}_{param}"   # distinct files per tagged sweep
     nseeds = int(cfg.get("nseeds", 1))
     print("=" * 70)
     print(f"SWEEP over {param!r} = {values}  (continuation={use_cont}, nseeds={nseeds})")
+    if not values:
+        print("[sweep] sweep_values is empty: nothing to do")
+        return []
     rot = [abs(float(v if param == "Omega" else cfg.get("Omega", 0.0))) for v in values]
     if max(rot) >= 0.5 and nseeds < 2:
         print("[hint] rotating sweep with nseeds=1: continuation alone can stay on a vortex-free")
@@ -411,9 +424,9 @@ def mode_convergence(cfg):
         write_csv(os.path.join(paths.BASE, "convergence.csv"), rows)
         print(f"    {axis} L={L:.4g} N={N} p={pad}: E={d['E']:.9g} R90={d['R90']:.6g} "
               f"vir={d['virial_rel']:.2e} ppR90={d['points_per_R90']:.1f} res={d['resid_rel']:.2e}")
-    grid = [r for r in rows if r["axis"] == "grid"]
+    grid = sorted((r for r in rows if r["axis"] == "grid"), key=lambda r: r["N"])
     if len(grid) >= 2:
-        base = grid[-1]
+        base = grid[-1]                                 # finest grid (largest N)
         print("-" * 70)
         for r in grid:
             print(f"    N={r['N']}: dE_vs_finest={r['E'] - base['E']:+.3e} "
@@ -436,9 +449,10 @@ def mode_smoke(cfg):
     print("-" * 70)
     print("[smoke] tf_only")
     mode_tf_only(small)
-    ok = bool(gate["passed"] and d and d.get("converged", False) is not None)
+    run_ok = bool(d) and bool(d.get("converged", False))
+    ok = bool(gate["passed"]) and run_ok
     print("-" * 70)
-    print(f"[smoke] validation_passed={gate['passed']} run_done={bool(d)} OVERALL={ok}")
+    print(f"[smoke] validation_passed={gate['passed']} run_converged={run_ok} OVERALL={ok}")
     return dict(gate=gate, run=d, ok=ok)
 
 
