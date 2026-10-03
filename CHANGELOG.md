@@ -1,6 +1,6 @@
 # Changelog
 
-## 1.2.1 (2026-09-29)
+## 1.2.1 (2026-10-03)
 
 Bug-fix release from a code audit. Converged ground states of 1.2.0 are
 unchanged; see `tests/test_audit.py` for a regression test per item.
@@ -49,6 +49,23 @@ unchanged; see `tests/test_audit.py` for a regression test per item.
   which returns 0; `main` still returns the result for use from Python.
 - `examples/kaggle_demo.py` installed the non-existent tag `v1.1.1`.
 
+- The triangular seed at `Omega=0` (only when requested explicitly) imprinted
+  `-1` vortices; it now uses `+1`, as for `Omega>0`.
+
+### Changed
+- **Benchmark layout.** The paper scripts are named by what they compute and
+  their raw outputs live in `benchmarks/results/<script>/`:
+  `kaggle_v11_step2_confirm.py` -> `verification.py`,
+  `kaggle_v11_step3_references.py` -> `selfgravity_limits.py`,
+  `kaggle_v11_step4_itp_compare.py` -> `itp_agreement.py`,
+  `kaggle_v12_ma4_timing.py` -> `itp_timing.py`;
+  `results_v1.1/step{2,3,4}`, `results_v1.2` -> `results/{verification,
+  selfgravity_limits,itp_agreement,itp_timing}`. `make_paper_numbers.py` reads
+  that layout and also draws the time-to-accuracy figure; `benchmarks/README.md`
+  maps every script to the tables and figures it produces. The unused
+  `_kaggle_common.py` was removed. Script behaviour is unchanged.
+- README: stop reasons and the double-precision residual floor (~1e-8) explained.
+
 ### Added
 - `tests/test_audit.py`: energy gradient vs `H` by finite differences for every
   kernel and dimension, kernel symmetry, `mu = <H>`, exact non-interacting
@@ -70,7 +87,7 @@ unchanged; see `tests/test_audit.py` for a regression test per item.
 ### Added
 - `record_trace=True` keeps `(wall time, iteration, E, residual)` per iteration
   in `obs["trace"]` (device-synchronized timings).
-- `benchmarks/kaggle_v12_ma4_timing.py`: time-to-accuracy of PCG (`pr_precond`,
+- `benchmarks/kaggle_v12_ma4_timing.py` (now `benchmarks/itp_timing.py`): time-to-accuracy of PCG (`pr_precond`,
   `pr`) against imaginary-time split-step at several time steps, on four cases.
 
 ## 1.1.1 (2026-09-26)

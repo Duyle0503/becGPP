@@ -1,5 +1,5 @@
 # =============================================================================
-#  becGPP v1.1 -- STEP 4: becGPP (preconditioned CG) versus the standard
+#  becGPP benchmark: agreement of becGPP (preconditioned CG) with the standard
 #  imaginary-time split-step Fourier method (ITP-TSSP) on the same GPU
 #  (Kaggle, ONE cell, GPU accelerator ON)
 # -----------------------------------------------------------------------------
@@ -26,7 +26,7 @@
 #  is run to stationarity; the Strang splitting leaves an O(dt^2) bias in the
 #  stationary energy, removed by Richardson extrapolation of the last two dt.
 #
-#  Outputs (/kaggle/working/v11_step4): itp_vs_pcg.csv, SUMMARY.txt, hardware.json
+#  Outputs (/kaggle/working/itp_agreement): itp_vs_pcg.csv, SUMMARY.txt, hardware.json
 # =============================================================================
 import os, sys, json, time, math, shutil, subprocess, platform, csv
 
@@ -51,7 +51,7 @@ _install()
 import torch
 import becgpp
 
-# The v1.1 paper runs used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
+# The paper runs (v1.1) used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
 # script reproduces them exactly under becGPP >= 1.2 (whose default is "pr_precond").
 import becgpp.config as _bc
 _bc.CFG_DEFAULTS["cg_beta"] = "pr"
@@ -60,7 +60,7 @@ from becgpp.operators import energy_components
 from becgpp.interactions import long_range_phi, clear_kernel_cache
 
 DEV = becgpp.DEV
-ROOT = "/kaggle/working/v11_step4" if os.path.isdir("/kaggle/working") else os.path.abspath("v11_step4")
+ROOT = "/kaggle/working/itp_agreement" if os.path.isdir("/kaggle/working") else os.path.abspath("itp_agreement")
 os.makedirs(ROOT, exist_ok=True)
 paths.configure(ROOT)
 SUMMARY = []
@@ -236,6 +236,6 @@ with open(os.path.join(ROOT, "itp_vs_pcg.csv"), "w", newline="") as f:
     w.writeheader()
     w.writerows(rows)
 open(os.path.join(ROOT, "SUMMARY.txt"), "w").write("\n".join(SUMMARY) + "\n")
-arch = shutil.make_archive("/kaggle/working/becgpp_v11_step4" if os.path.isdir("/kaggle/working")
-                           else os.path.abspath("becgpp_v11_step4"), "zip", root_dir=ROOT)
+arch = shutil.make_archive("/kaggle/working/becgpp_itp_agreement" if os.path.isdir("/kaggle/working")
+                           else os.path.abspath("becgpp_itp_agreement"), "zip", root_dir=ROOT)
 print("\n" + "=" * 78 + "\n" + "\n".join(SUMMARY) + f"\n\nArchive: {arch}")

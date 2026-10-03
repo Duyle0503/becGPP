@@ -1,10 +1,10 @@
-"""Turn the Kaggle outputs of the v1.1 confirmation runs into manuscript input.
+"""Turn the benchmark outputs (benchmarks/results/) into manuscript numbers.
 
-Usage (after unzipping the three archives next to each other):
+Usage :
 
-    python make_paper_numbers.py v11_step2 v11_step3 v11_step4 --figdir ../latex/figs
+    python make_paper_numbers.py --figdir figs        # from benchmarks/
 
-Prints the LaTeX rows / numbers that replace every \\PENDING{...} in becGPP.tex and
+Prints the LaTeX rows / numbers quoted in the paper and
 writes fig_convergence.pdf (kernel orders incl. -ln r) and fig_mass_radius.pdf
 into --figdir. Missing folders are skipped.
 """
@@ -46,7 +46,7 @@ def header(t):
     print("\n" + "=" * 78 + f"\n% {t}\n" + "=" * 78)
 
 
-def step2(d, figdir):
+def verification(d, figdir):
     hw = os.path.join(d, "hardware.json")
     if os.path.isfile(hw):
         header("Hardware (Sec. perf, first sentence)")
@@ -139,7 +139,7 @@ def step2(d, figdir):
                   f"{f(r['cpu_ms']):.1f} & {f(r['speedup']):.1f} \\\\".replace(",", "\\,"))
 
 
-def step3(d, figdir):
+def selfgravity_limits(d, figdir):
     sn = rows(os.path.join(d, "ref_schrodinger_newton.csv"))
     if sn:
         header("Table sn (Schrodinger-Newton)")
@@ -164,25 +164,67 @@ def step3(d, figdir):
         print(f"[fig] copied fig_mass_radius.pdf -> {figdir}")
 
 
-def step4(d):
+def itp_agreement(d):
     it = rows(os.path.join(d, "itp_vs_pcg.csv"))
     if it:
-        header("Table itp")
+        header("Table itp: energies, Delta-t-extrapolated agreement (v1.1 timings unused)")
         for r in it:
             print(f"{r['case']} & {f(r['E_pcg']):.8f} & {sci(r['rel_diff_extrap'])} & "
                   f"{f(r['t_pcg_target_s']):.2f} & {f(r['t_itp_to_target_s']):.2f} \\\\"
                   f"   % speedup x{f(r['speedup_to_target']):.1f}")
 
 
+def itp_timing(d, figdir):
+    """Times to 1e-4 / 1e-6 (Table itp) and the convergence figure (Fig. itp)."""
+    tm = rows(os.path.join(d, "timing.csv"))
+    if tm:
+        header("Table itp: time to 1e-4 / 1e-6 (s)")
+        for case in dict.fromkeys(r["case"] for r in tm):
+            cells = []
+            for m in ("PCG-pp", "PCG-pr", "ITP"):
+                r = next((x for x in tm if x["case"] == case and x["method"] == m), None)
+                a, b = (f(r["t_to_1e-04"]), f(r["t_to_1e-06"])) if r else (float("nan"),) * 2
+                cells.append(f"{a:.2f}\\,/\\,{b:.2f}" if math.isfinite(b) else "--")
+            print(f"{case} & " + " & ".join(cells) + " \\\\")
+    tr = rows(os.path.join(d, "traces.csv"))
+    if not (tr and figdir):
+        return
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    plt.rcParams.update({"font.size": 10, "font.family": "serif", "mathtext.fontset": "cm",
+                         "xtick.direction": "in", "ytick.direction": "in", "legend.frameon": False})
+    cases = list(dict.fromkeys(r["case"] for r in tr))
+    fig, axs = plt.subplots(2, 2, figsize=(7.2, 5.6))
+    style = {"PCG-pp": ("-", "#1f5c8b", "becGPP (pr_precond)"),
+             "PCG-pr": ("--", "#6a9fcb", "becGPP (pr)"),
+             "ITP": ("-", "#b3282d", "imaginary time")}
+    for k, (ax, c) in enumerate(zip(axs.ravel(), cases)):
+        for m, (ls, col, lab) in style.items():
+            pts = [r for r in tr if r["case"] == c and r["method"] == m and f(r["t"]) > 0]
+            ax.loglog([f(r["t"]) for r in pts], [max(f(r["rel_err"]), 1e-16) for r in pts],
+                      ls, color=col, lw=1.2, label=lab)
+        ax.axhline(1e-5, color="0.6", lw=0.6, ls=":")
+        ax.text(0.04, 0.06, f"({'abcd'[k]})", transform=ax.transAxes)
+        ax.set_xlabel("wall time (s)")
+        ax.set_ylabel(r"$|E-E_{\rm ref}|/|E_{\rm ref}|$")
+    axs[0, 0].legend(fontsize=7.5, loc="center left")
+    fig.tight_layout()
+    fig.savefig(os.path.join(figdir, "fig_itp_timing.pdf"))
+    print(f"[saved] {os.path.join(figdir, 'fig_itp_timing.pdf')}")
+
+
 if __name__ == "__main__":
     ap = argparse.ArgumentParser()
-    ap.add_argument("step2", nargs="?", default="v11_step2")
-    ap.add_argument("step3", nargs="?", default="v11_step3")
-    ap.add_argument("step4", nargs="?", default="v11_step4")
+    ap.add_argument("verification", nargs="?", default="results/verification")
+    ap.add_argument("selfgravity_limits", nargs="?", default="results/selfgravity_limits")
+    ap.add_argument("itp_agreement", nargs="?", default="results/itp_agreement")
+    ap.add_argument("itp_timing", nargs="?", default="results/itp_timing")
     ap.add_argument("--figdir", default=None)
     a = ap.parse_args()
     if a.figdir:
         os.makedirs(a.figdir, exist_ok=True)
-    step2(a.step2, a.figdir)
-    step3(a.step3, a.figdir)
-    step4(a.step4)
+    verification(a.verification, a.figdir)
+    selfgravity_limits(a.selfgravity_limits, a.figdir)
+    itp_agreement(a.itp_agreement)
+    itp_timing(a.itp_timing, a.figdir)

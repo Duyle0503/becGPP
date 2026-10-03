@@ -1,9 +1,9 @@
 # =============================================================================
-#  becGPP v1.1 -- STEP 2: confirmation runs for the revised code and manuscript
+#  becGPP benchmark: verification, sweeps, CG variants and performance
 #  (Kaggle, ONE cell, GPU accelerator ON: Settings -> Accelerator -> GPU)
 # -----------------------------------------------------------------------------
-#  Installs becGPP v1.1 from GitHub and produces every number the revised
-#  manuscript quotes for the code changes:
+#  Installs becGPP (tag v1.1.0, the version used for the paper) from GitHub and
+#  produces the numbers of the verification and performance sections:
 #
 #   S0 hardware.json              GPU/CPU model, driver, torch threads (Sec. perf)
 #   S1 validation.csv             analytic gate at N=512: 1/r, -ln r, q2D, LLL, 3D,
@@ -14,7 +14,7 @@
 #   S5 cq_ladder.csv              cubic-quintic droplets approaching the flat top
 #   S6 pcg_variants.csv           Polak-Ribiere variants (pr / pr_precond / none)
 #   S7 perf_gpu.csv, perf_cpu_gpu.csv   performance with hardware recorded
-#   -> everything zipped to /kaggle/working/becgpp_v11_step2.zip
+#   -> everything zipped to /kaggle/working/becgpp_verification.zip
 #
 #  Turn sections on/off in SECTIONS below. Rough GPU time (P100/T4): S1 ~5 min,
 #  S2 ~5 min, S3 ~40-70 min, S4 ~15 min, S5 ~15 min, S6 ~10 min, S7 ~10 min.
@@ -44,14 +44,14 @@ _install()
 import torch
 import becgpp
 
-# The v1.1 paper runs used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
+# The paper runs (v1.1) used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
 # script reproduces them exactly under becGPP >= 1.2 (whose default is "pr_precond").
 import becgpp.config as _bc
 _bc.CFG_DEFAULTS["cg_beta"] = "pr"
 from becgpp import default_cfg, run, paths, make_grid, ground_state, diagnostics
 assert becgpp.__version__.startswith(("1.1", "1.2")), f"need becGPP >= 1.1, got {becgpp.__version__}"
 
-ROOT = "/kaggle/working/v11_step2" if os.path.isdir("/kaggle/working") else os.path.abspath("v11_step2")
+ROOT = "/kaggle/working/verification" if os.path.isdir("/kaggle/working") else os.path.abspath("verification")
 os.makedirs(ROOT, exist_ok=True)
 QUIET = dict(show_inline=False, zip_output=False)
 
@@ -339,7 +339,7 @@ for key, fn in (("S1", s1_validate), ("S2", s2_kernels), ("S3", s3_gc_sweep),
         guard(key, fn)
 
 open(os.path.join(ROOT, "SUMMARY.txt"), "w").write("\n".join(SUMMARY) + "\n")
-arch = shutil.make_archive("/kaggle/working/becgpp_v11_step2" if os.path.isdir("/kaggle/working")
-                           else os.path.abspath("becgpp_v11_step2"), "zip", root_dir=ROOT)
+arch = shutil.make_archive("/kaggle/working/becgpp_verification" if os.path.isdir("/kaggle/working")
+                           else os.path.abspath("becgpp_verification"), "zip", root_dir=ROOT)
 print("\n" + "=" * 78 + "\n" + "\n".join(SUMMARY))
 print(f"\nArchive: {arch}  -- download it and send it back for the manuscript update.")

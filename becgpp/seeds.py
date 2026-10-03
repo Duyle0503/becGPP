@@ -58,7 +58,7 @@ def triangular_seed(G, cfg):
     if tf is None or not tf.get("converged", False):
         return tf_seed(G, cfg)
     amp = torch.sqrt(torch.clamp(tf["n"], min=0.0))
-    wsign = 1.0 if O > 0 else -1.0
+    wsign = -1.0 if O < 0 else 1.0
     O = abs(O)
     av = math.sqrt(2.0 * math.pi / (math.sqrt(3.0) * O))
     dy = math.sqrt(3.0) * av / 2.0

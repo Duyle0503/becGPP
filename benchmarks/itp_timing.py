@@ -1,43 +1,40 @@
 # =============================================================================
-#  becGPP v1.2 -- MA-4: like-for-like time to solution, becGPP (PCG) vs an
-#  independent imaginary-time split-step solver (ITP), on the same GPU
+#  becGPP benchmark: time to a given accuracy, becGPP (PCG) vs. an independent
+#  imaginary-time split-step solver (ITP), on the same GPU
 #  (Kaggle, ONE cell, GPU accelerator ON; ~30-50 min on a T4 for all four cases)
-#  v1.2.1 of this script: ITP holds the potential V(psi_n) over each symmetric
-#  split step -- ONE long-range convolution per step instead of two, and a smaller
-#  dt-bias than re-evaluating V at the half step (this favours ITP, so the timing
-#  comparison is conservative); ITP stops once it is
-#  1e-7 below the finest target or after ITP_BUDGET_S; PCG reference to res 1e-8
-#  (E error ~ res^2, far below 1e-6). Set RUN_CASES to rerun only some cases.
 # -----------------------------------------------------------------------------
-#  Answers referee point MA-4: in the v1.1 comparison becGPP was timed to a
-#  residual of 1e-5 and ITP to an energy error of 1e-5. Here BOTH methods are
-#  timed by the SAME criterion: the first wall time at which the relative energy
-#  error |E - E_ref|/|E_ref| drops below a target, read from a per-iteration
-#  convergence history (becGPP: cfg record_trace=True; ITP: every 25 steps).
+#  Both methods are timed by the SAME criterion: the first wall time at which the
+#  relative energy error |E - E_ref|/|E_ref| drops below a target, read from a
+#  per-iteration convergence history (becGPP: cfg record_trace=True; ITP: every
+#  25 steps). ITP holds the potential V(psi_n) over each symmetric split step --
+#  one long-range convolution per step, and a smaller dt-bias than re-evaluating
+#  V at the half step -- so the comparison is conservative towards becGPP. ITP
+#  stops once it is below STOP_TOL or after ITP_BUDGET_S; set RUN_CASES to rerun
+#  only some cases.
 #
 #  E_ref = lowest energy found by any method at the tightest settings (the
 #  becGPP runs to residual 1e-8). Methods:
 #     PCG-pp : becGPP, cg_beta="pr_precond"  (default since 1.2.0)
-#     PCG-pr : becGPP, cg_beta="pr"          (default in 1.0-1.1, used for the v1.1 paper runs)
+#     PCG-pr : becGPP, cg_beta="pr"          (default in 1.0-1.1)
 #     ITP    : Strang split-step normalized gradient flow, dt = 0.02 -> 0.005 ->
 #              0.00125 -> 0.0003125 (rotation by x/y alternating directions),
 #              potential V(psi_n) held over each step
 #  All start from the SAME seed; kernel caches are warmed before timing.
 #
-#  Cases (trap units), identical to the v1.1 step-4 run:
+#  Cases (trap units), identical to itp_agreement.py:
 #   A  2D harmonic,          beta2=200, Omega=0,   L=10, N=256
 #   B  2D rotating lattice,  beta2=200, Omega=0.9, L=12, N=256
 #   C  3D harmonic,          beta2=200, Omega=0,   L=8,  N=96
 #   D  3D self-gravitating,  beta2=100, G_C=20,    L=8,  N=96
 #
-#  Outputs (/kaggle/working/v12_ma4, zipped): ma4_timing.csv (times to 1e-4,
-#  1e-5, 1e-6 for each method), ma4_traces.csv (full histories),
-#  fig_ma4_convergence.(pdf|png) (energy error vs wall time, 4 panels),
+#  Outputs (/kaggle/working/itp_timing, zipped): timing.csv (times to 1e-4,
+#  1e-5, 1e-6 for each method), traces.csv (full histories),
+#  fig_itp_timing.(pdf|png) (energy error vs wall time, 4 panels),
 #  SUMMARY.txt, hardware.json
 # =============================================================================
 import os, sys, json, time, math, shutil, subprocess, platform, csv
 
-REPO, TAG = "https://github.com/Duyle0503/becGPP.git", "v1.2.0"
+REPO, TAG = "https://github.com/Duyle0503/becGPP.git", "v1.2.0"   # version used for the paper
 
 
 def _install():
@@ -68,7 +65,7 @@ STOP_TOL = 1e-7                   # ITP stops once |E-E_ref|/|E_ref| < STOP_TOL 
 # ------------------------------------------------------------------------------
 assert becgpp.__version__.startswith("1.2"), f"need becGPP 1.2.x (record_trace), got {becgpp.__version__}"
 DEV = becgpp.DEV
-ROOT = "/kaggle/working/v12_ma4" if os.path.isdir("/kaggle/working") else os.path.abspath("v12_ma4")
+ROOT = "/kaggle/working/itp_timing" if os.path.isdir("/kaggle/working") else os.path.abspath("itp_timing")
 os.makedirs(ROOT, exist_ok=True)
 paths.configure(ROOT)
 TARGETS = (1e-4, 1e-5, 1e-6)
@@ -227,8 +224,8 @@ def save_tables():
     """Written after every case, so an interrupted run keeps the finished cases."""
     tag = "".join(RUN_CASES)
     sfx = "" if tag == "ABCD" else f"_{tag}"
-    write(os.path.join(ROOT, f"ma4_timing{sfx}.csv"), rows)
-    write(os.path.join(ROOT, f"ma4_traces{sfx}.csv"), traces)
+    write(os.path.join(ROOT, f"timing{sfx}.csv"), rows)
+    write(os.path.join(ROOT, f"traces{sfx}.csv"), traces)
     open(os.path.join(ROOT, f"SUMMARY{sfx}.txt"), "w").write("\n".join(SUMMARY) + "\n")
 
 
@@ -309,8 +306,8 @@ for ax, (name, _) in zip(axs.ravel(), CASES):
 axs[0, 0].legend(fontsize=7.5)
 fig.tight_layout()
 for ext in ("pdf", "png"):
-    fig.savefig(os.path.join(ROOT, f"fig_ma4_convergence{'' if ''.join(RUN_CASES) == 'ABCD' else '_' + ''.join(RUN_CASES)}.{ext}"), dpi=150)
+    fig.savefig(os.path.join(ROOT, f"fig_itp_timing{'' if ''.join(RUN_CASES) == 'ABCD' else '_' + ''.join(RUN_CASES)}.{ext}"), dpi=150)
 
-arch = shutil.make_archive("/kaggle/working/becgpp_v12_ma4" if os.path.isdir("/kaggle/working")
-                           else os.path.abspath("becgpp_v12_ma4"), "zip", root_dir=ROOT)
+arch = shutil.make_archive("/kaggle/working/becgpp_itp_timing" if os.path.isdir("/kaggle/working")
+                           else os.path.abspath("becgpp_itp_timing"), "zip", root_dir=ROOT)
 print("\n" + "=" * 78 + "\n" + "\n".join(SUMMARY) + f"\n\nArchive: {arch}")

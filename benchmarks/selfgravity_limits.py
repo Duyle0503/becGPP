@@ -1,5 +1,5 @@
 # =============================================================================
-#  becGPP v1.1 -- STEP 3: comparison with independent (literature/analytic) references
+#  becGPP benchmark: untrapped self-gravitating condensate vs. its exact limits
 #  (Kaggle, ONE cell, GPU accelerator ON)
 # -----------------------------------------------------------------------------
 #  All runs are the UNTRAPPED self-gravitating condensate (s = 0), i.e. the
@@ -21,7 +21,7 @@
 #  R3  Mass-radius curve R99*G_C versus chi = G_C beta2 / pi (the variable
 #      chi = 4 G M^2 m a / hbar^2 of Chavanis & Delfini), bridging R1 and R2.
 #
-#  Outputs (in /kaggle/working/v11_step3, zipped): ref_schrodinger_newton.csv,
+#  Outputs (in /kaggle/working/selfgravity_limits, zipped): ref_schrodinger_newton.csv,
 #  ref_mass_radius.csv, fig_mass_radius.(pdf|png), SUMMARY.txt, hardware.json
 # =============================================================================
 import os, sys, json, time, math, shutil, subprocess, platform, csv
@@ -48,14 +48,14 @@ import numpy as np
 import torch
 import becgpp
 
-# The v1.1 paper runs used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
+# The paper runs (v1.1) used cg_beta="pr" (the default in 1.0-1.1); pin it so that this
 # script reproduces them exactly under becGPP >= 1.2 (whose default is "pr_precond").
 import becgpp.config as _bc
 _bc.CFG_DEFAULTS["cg_beta"] = "pr"
 from becgpp import default_cfg, paths, make_grid, ground_state, diagnostics
 from becgpp.interactions import clear_kernel_cache
 
-ROOT = "/kaggle/working/v11_step3" if os.path.isdir("/kaggle/working") else os.path.abspath("v11_step3")
+ROOT = "/kaggle/working/selfgravity_limits" if os.path.isdir("/kaggle/working") else os.path.abspath("selfgravity_limits")
 os.makedirs(ROOT, exist_ok=True)
 paths.configure(ROOT)
 SUMMARY = []
@@ -203,6 +203,6 @@ for ext in ("pdf", "png"):
     fig.savefig(os.path.join(ROOT, f"fig_mass_radius.{ext}"), dpi=160)
 
 open(os.path.join(ROOT, "SUMMARY.txt"), "w").write("\n".join(SUMMARY) + "\n")
-arch = shutil.make_archive("/kaggle/working/becgpp_v11_step3" if os.path.isdir("/kaggle/working")
-                           else os.path.abspath("becgpp_v11_step3"), "zip", root_dir=ROOT)
+arch = shutil.make_archive("/kaggle/working/becgpp_selfgravity_limits" if os.path.isdir("/kaggle/working")
+                           else os.path.abspath("becgpp_selfgravity_limits"), "zip", root_dir=ROOT)
 print("\n" + "=" * 78 + "\n" + "\n".join(SUMMARY) + f"\n\nArchive: {arch}")
