@@ -7,9 +7,10 @@
 #  NOT call the becGPP solver: it is the normalized gradient flow discretized by
 #  Strang time splitting (Bao & Du 2004; Bao, Wang & Markowich 2005 for rotation,
 #  whose Lz term is split in alternating directions x / y and applied exactly by
-#  1D FFTs). It is the method used for ground states by GPELab, BEC2HPC and GPUE,
-#  so it serves both as an independent accuracy check (same minimizer, same
-#  energy) and as the baseline for time-to-solution.
+#  1D FFTs). It is the explicit imaginary-time method of split-step codes such as
+#  GPUE (GPELab uses an implicit backward-Euler gradient flow, BEC2HPC the
+#  preconditioned CG), and serves as an independent accuracy check: same
+#  discretization, same energy, different minimizer.
 #
 #  Only the long-range potential of case D reuses becGPP's free-space
 #  convolution (the ITP method has no kernel of its own); cases A-C are fully
