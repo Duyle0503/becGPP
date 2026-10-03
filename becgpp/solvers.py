@@ -63,6 +63,11 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     alpha = float(cfg.get("step", 1.0))                  # initial trial step
     alpha_min, alpha_max = 1e-8, float(cfg.get("step_max", 3.0))
     ls_max = int(cfg.get("linesearch_max", 8))          # Armijo halvings per iteration
+    # consecutive failed line searches before stopping. After a failure psi, grad and
+    # the direction are unchanged and the Barzilai-Borwein mix pulls alpha back
+    # towards 2/3 of the (unchanged) BB step, so alpha never reaches alpha_min and
+    # the retries repeat the same trials: the energy has settled at round-off.
+    stall_max = max(1, int(cfg.get("linesearch_stall", 10)))
     c1 = 1e-4
     shrink, growth = 0.5, 1.1
     bb_min, bb_max, bb_mix = 0.05, alpha_max, 0.5
@@ -117,7 +122,10 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     best_resid = resid_rel
     best_psi = psi.clone()
     E_ref = E
+    n_fail = 0                                           # consecutive failed line searches
+    n_iter = 0                                           # iterations performed
     for it in range(maxit):
+        n_iter = it + 1
         z, sigma = _preconditioner(grad, psi, G, cfg, phi)
         if it == 0 or cg_beta == "none" or (restart_period > 0 and it % restart_period == 0):
             beta = 0.0
@@ -165,12 +173,17 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
             if trial < alpha_min:
                 break
         if not accepted:
+            n_fail += 1
             alpha = max(alpha * 0.5, alpha_min)
             direction = z.clone()
-            if alpha <= alpha_min:
+            if alpha <= alpha_min or n_fail >= stall_max:
                 stop = "line_search_stalled"
+                if verbose:
+                    print(f"[gs] line search stalled it={it}: E={E:.10g} res={resid_rel:.3e} "
+                          f"best_res={best_resid:.3e}")
                 break
             continue
+        n_fail = 0
         psi_prev = psi
         grad_prev = grad
         z_prev = z
@@ -214,7 +227,7 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     resid_abs, mu_f, resid_rel = compute_residual(psi, G, cfg)
     converged = bool(converged or (resid_rel < res_tol))
     obs = observables(psi, G, cfg)
-    obs.update(iters=it, walltime=time.time() - t0, resid_abs=resid_abs,
+    obs.update(iters=n_iter, walltime=time.time() - t0, resid_abs=resid_abs,
                resid_rel=resid_rel, min_resid=best_resid, converged=converged,
                stop_reason=stop, preconditioner_shift=sigma)
     if record:

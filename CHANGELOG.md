@@ -1,5 +1,59 @@
 # Changelog
 
+## 1.2.1 (2026-09-29)
+
+Bug-fix release from a code audit. Converged ground states of 1.2.0 are
+unchanged; see `tests/test_audit.py` for a regression test per item.
+
+### Fixed
+- **Solver ran to `maxit` once the energy had settled.** After a failed Armijo
+  search the Barzilai-Borwein mix pulled the trial step back to ~2/3 of the
+  unchanged BB step, so `alpha_min` (the only stall exit) was unreachable, and
+  the energy-window stop is evaluated on accepted steps only. When the residual
+  floor of the grid lay above `res_tol`, the solver repeated identical line
+  searches (8 energy evaluations each) until `maxit` -- e.g. 242 s instead of
+  0.24 s for the non-interacting 2D trap at `res_tol=1e-9`. It now stops with
+  `stop_reason="line_search_stalled"` after `linesearch_stall` (new key,
+  default 10) consecutive failures. Runs without such a stall are bit-identical.
+- `obs["iters"]` is the number of iterations performed (it was the last
+  0-based loop index, one less; `maxit` runs now report `maxit`).
+- **Checkpoint collisions.** The run id hashed only 17 keys, so runs differing
+  in e.g. `seed_winding`, `seed_noise`, `energy_tol` or the line-search settings
+  resumed each other's checkpoints. It now hashes every key that can change the
+  state (all but output/diagnostic/mode settings and `maxit`). Run ids differ
+  from 1.2.0, so old checkpoints are not resumed.
+- **Config files bypassed validation.** Keys from `--config` were merged with
+  `dict.update`: aliases (`res:`) were ignored, typos (`omega:`) accepted
+  silently, and YAML numbers such as `1e3` (strings for PyYAML) crashed later
+  with a `TypeError`. Files now go through `default_cfg` and are typed like the
+  CLI flags.
+- `sweep_param` is validated (unknown or non-numeric keys raise, aliases map);
+  an empty `sweep_values` returns `[]` instead of crashing.
+- `mode_smoke` reported `OVERALL=True` whether or not the run converged.
+- **Negative rotation.** The triangular seed imprinted `+1` vortices for
+  `Omega<0`; `w_LLL` projected on `z^m` instead of `conj(z)^m`; the vortex
+  smoothing length and the lattice coarse-graining in the TF figure used the
+  signed `Omega`; `E_bind` was defined only for `Omega=+1`.
+- `resample_state` assumed the grid starts at `-L`, which holds for even
+  `Ngrid` only; odd grids were shifted by `dx/2` (error ~0.1 on the identity map).
+- `dimension` values other than `2D`, `3D`, `quasi2D` (e.g. `"1D"`) silently
+  ran in 2D; they now raise.
+- `auto_grid` returned a negative radius estimate for `G_C<0`.
+- The Thomas-Fermi reference of the trapped pure quintic gas (`beta2=0`,
+  `beta3>0`) was missing; it is `sqrt((mu-V)/beta3)`.
+- `mode_convergence` took the last grid in `conv_Ngrids` as the finest one;
+  it now uses the largest `N`.
+- **The `becgpp` command exited with status 1 after a successful run** (and
+  printed the result dict to stderr): the console script does `sys.exit(main())`
+  and `main` returns the result. The entry point is now `becgpp.cli:console`,
+  which returns 0; `main` still returns the result for use from Python.
+- `examples/kaggle_demo.py` installed the non-existent tag `v1.1.1`.
+
+### Added
+- `tests/test_audit.py`: energy gradient vs `H` by finite differences for every
+  kernel and dimension, kernel symmetry, `mu = <H>`, exact non-interacting
+  energies, vortex counting, LLL weight, CLI typing, and the regressions above.
+
 ## 1.2.0 (2026-09-26)
 
 ### Changed

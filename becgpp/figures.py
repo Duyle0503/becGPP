@@ -101,7 +101,7 @@ def save_tf_comparison(psi, G, cfg, rid):
     # already does the azimuthal averaging, so the raw density is the envelope.
     Nv = vortex_diagnostic(psi, G, cfg.get("Omega", 1.0))["Nv"] if G["ndim"] == 2 else 0
     if G["ndim"] == 2 and Nv >= 6 and np.isfinite(R90) and R90 > 0:
-        O = max(float(cfg.get("Omega", 1.0)), 1e-12)
+        O = max(abs(float(cfg.get("Omega", 1.0))), 1e-12)
         a_v = math.sqrt(2.0 * math.pi / (math.sqrt(3.0) * O))
         sig = min(0.8 * a_v, 0.15 * R90)
         rho_cg = torch.clamp(gaussian_smooth(rho, G, sig), min=0.0)

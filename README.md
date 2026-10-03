@@ -100,6 +100,18 @@ The CG coefficient is `cg_beta="pr_precond"` by default since 1.2.0
 (`"pr"` reproduces 1.0–1.1 and the v1.1 benchmark scripts). `record_trace=True`
 stores the per-iteration history `(time, iteration, E, residual)` in `obs["trace"]`.
 
+A solve ends with one `stop_reason`: `converged` (relative residual below
+`res_tol`), `energy_converged` (relative energy change over `conv_window`
+iterations below `energy_tol`), `line_search_stalled` (`linesearch_stall`
+consecutive failed Armijo searches: the energy has settled at round-off, typically
+because the residual floor set by the grid or box lies above `res_tol`), or
+`maxit`. `iters` is the number of iterations performed. `converged` is true only
+for the first two, or when the final residual is below `res_tol`.
+
+Configuration keys are validated everywhere (Python API, config files, CLI):
+an unknown key, an unknown `dimension` or a non-numeric `sweep_param` is an error,
+and the aliases (`res=`, `etol=`, `N=`, `dim=`) work in config files too.
+
 ## Output
 
 Every run writes to the output directory (`GPP_OUTDIR`, else `--outdir`, else

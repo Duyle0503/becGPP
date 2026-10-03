@@ -6,7 +6,7 @@
 It simply forwards to becgpp.cli.main; installing the package also gives you the
 ``becgpp`` command directly.
 """
-from becgpp.cli import main
+from becgpp.cli import console
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(console())

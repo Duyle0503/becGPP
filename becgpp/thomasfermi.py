@@ -3,7 +3,8 @@
 extract_tf() returns, for whatever parameters are set:
   * G_C != 0                  -> nonlocal compressed-TF (fixed point),
   * local, self-bound (b2<0<b3) -> zero-pressure flat-top TF,
-  * local, repulsive + trap    -> inverted-profile TF (parabola if b3=0),
+  * local, repulsive + trap    -> inverted-profile TF (parabola if b3=0,
+                                 sqrt((mu-V)/b3) if b2=0),
 or None where no TF reference is defined.
 """
 import math
@@ -135,8 +136,9 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
             R90, R99 = mass_quantiles(n, G, (0.90, 0.99))
             tf = dict(kind="local_flattop", n=n, R90=R90, R99=R99, mu=mu,
                       rho0=rho0, R=R, converged=True, final_dn=0.0)
-        elif confined and b2 > 0:
-            # Repulsive trapped gas: inverted-profile TF (parabola if b3=0).
+        elif confined and (b2 > 0 or (b2 == 0 and b3 > 0)):
+            # Repulsive trapped gas: inverted-profile TF (parabola if b3=0,
+            # pure quintic sqrt((mu-V)/b3) if b2=0).
             f = lambda mu: _invert_local(mu, Veff, b2, b3)
             mu = _bisect_mu_for_norm(f, G, Veff.min().item(),
                                      Veff.max().item() + abs(b2) + abs(b3) + 1.0)

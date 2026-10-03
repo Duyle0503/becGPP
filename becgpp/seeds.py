@@ -49,7 +49,8 @@ def triangular_seed(G, cfg):
     are STRAIGHT LINES parallel to the rotation axis z (the phase and cores use
     the in-plane coordinates only), arranged triangularly in the x-y plane -- the
     standard rotating-condensate vortex lattice. The envelope is the (oblate) TF
-    density, so the imprinted state already carries angular momentum."""
+    density, so the imprinted state already carries angular momentum. The
+    vortices circulate with the rotation: winding sign(Omega)."""
     O = float(cfg.get("Omega", 0.0))
     if abs(O) < 0.3:                                      # (almost) no rotation: no lattice to seed
         return tf_seed(G, cfg)
@@ -57,6 +58,7 @@ def triangular_seed(G, cfg):
     if tf is None or not tf.get("converged", False):
         return tf_seed(G, cfg)
     amp = torch.sqrt(torch.clamp(tf["n"], min=0.0))
+    wsign = 1.0 if O > 0 else -1.0
     O = abs(O)
     av = math.sqrt(2.0 * math.pi / (math.sqrt(3.0) * O))
     dy = math.sqrt(3.0) * av / 2.0
@@ -85,7 +87,7 @@ def triangular_seed(G, cfg):
         dxt = G["X"] - xx
         dyt = G["Y"] - yy
         dist = torch.sqrt(dxt * dxt + dyt * dyt)
-        phase = phase + torch.atan2(dyt, dxt)
+        phase = phase + wsign * torch.atan2(dyt, dxt)
         core = core * torch.tanh(dist / max(xi, 1e-12))
     noise = cfg.get("seed_noise", 1e-2) * torch.randn_like(amp)
     psi = (amp * core * (1.0 + noise)).to(torch.complex128) * torch.exp(1j * phase)

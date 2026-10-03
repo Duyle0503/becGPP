@@ -83,7 +83,7 @@ def observables(p, G, cfg):
     virial = (2.0 * comp["Ekin"] - s * comp["Etrap"] + d * comp["Econtact"]
               + 2.0 * d * comp["Ethree"]).item() + T_lr
     vscale = sum(abs(comp[k].item()) for k in ("Ekin", "Etrap", "Econtact", "Ethree", "Egrav")) + abs(T_lr)
-    binding_ref = 1.0 if (abs(O - 1.0) < 1e-12 and s == 2 and G["ndim"] == 2) else float("nan")
+    binding_ref = 1.0 if (abs(abs(O) - 1.0) < 1e-12 and s == 2 and G["ndim"] == 2) else float("nan")
     out = dict(E=E, mu=mu, Lz=Lz, rrms=math.sqrt(max(r2mean, 0.0)), peak=rho.max().item(),
                E_bind=(E - binding_ref) if math.isfinite(binding_ref) else float("nan"),
                virial=virial, virial_rel=abs(virial) / max(1.0, vscale), virial_lr_term=T_lr)

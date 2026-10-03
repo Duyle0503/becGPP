@@ -14,7 +14,7 @@ import argparse
 import json
 import os
 
-from .config import default_cfg, CFG_DEFAULTS
+from .config import default_cfg, canonical_key, CFG_DEFAULTS
 from . import paths
 from .modes import run
 
@@ -67,9 +67,20 @@ def main(argv=None):
     parser = build_parser()
     args = parser.parse_args(argv)
 
-    cfg = default_cfg()
+    file_cfg = {}
     if args.config:
-        cfg.update(_load_config_file(args.config))
+        loaded = _load_config_file(args.config)
+        if not isinstance(loaded, dict):
+            parser.error(f"{args.config}: expected a mapping of CFG keys")
+        # numbers such as 1e3 are strings for PyYAML (YAML 1.1): type them like the
+        # CLI flags, from the default of the matching key
+        for key, v in loaded.items():
+            tmpl = CFG_DEFAULTS.get(canonical_key(key))
+            file_cfg[key] = _coerce(v, tmpl) if (isinstance(v, str) and tmpl is not None) else v
+    try:
+        cfg = default_cfg(**file_cfg)       # validates keys and maps aliases (res=, N=, ...)
+    except ValueError as exc:
+        parser.error(f"{args.config}: {exc}")
     # apply any explicit CLI overrides (typed by the default's type)
     for key in CFG_DEFAULTS:
         v = getattr(args, key, None)
@@ -83,5 +94,12 @@ def main(argv=None):
     return run(cfg)
 
 
+def console(argv=None):
+    """Console-script entry point: run, then exit with status 0. ``main`` returns
+    the run's result, which ``sys.exit`` would print and turn into status 1."""
+    main(argv)
+    return 0
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(console())
