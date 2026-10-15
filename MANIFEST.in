@@ -1,0 +1,6 @@
+include LICENSE CITATION.cff CHANGELOG.md README.md requirements.txt
+recursive-include examples *.py *.yaml
+recursive-include benchmarks *.py *.md *.json *.csv *.txt *.pdf
+recursive-include tests *.py
+recursive-include data *.md *.csv *.json *.png
+recursive-include docs *.md *.json

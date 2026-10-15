@@ -2,6 +2,7 @@
 import csv
 import hashlib
 import json
+import os
 
 from .config import CFG_DEFAULTS
 from .constants import CODE_VERSION
@@ -34,3 +35,12 @@ def write_csv(path, rows):
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         w.writeheader()
         w.writerows(rows)
+
+
+def append_csv(path, row):
+    """Append one run, retaining a union of columns across package versions."""
+    existing = []
+    if os.path.isfile(path):
+        with open(path,newline='',encoding='utf-8') as stream:
+            existing = list(csv.DictReader(stream))
+    write_csv(path,existing+[row])

@@ -11,6 +11,9 @@ condensate in a harmonic trap with no long-range term, on a 128-point grid.
 Rotation (``Omega``), the long-range coupling (``G_C``) and larger grids are
 switched on explicitly by the user.
 """
+import copy
+import math
+import numbers
 
 CFG_DEFAULTS = dict(
     mode         = "smoke",        # smoke | validate | single | tf_only | sweep | convergence
@@ -105,7 +108,7 @@ def default_cfg(**overrides):
     ``res_tol=``); also ``etol`` -> ``energy_tol``, ``N`` -> ``Ngrid``,
     ``dim`` -> ``dimension``. Passing both an alias and its canonical key is an error.
     """
-    cfg = dict(CFG_DEFAULTS)
+    cfg = copy.deepcopy(CFG_DEFAULTS)
     for alias, canonical in _ALIASES.items():
         if alias in overrides:
             if canonical in overrides:
@@ -115,5 +118,53 @@ def default_cfg(**overrides):
     if unknown:
         raise ValueError(f"unknown config key(s): {sorted(unknown)}; "
                          f"see becgpp.config.CFG_DEFAULTS for valid keys")
-    cfg.update(overrides)
+    cfg.update(copy.deepcopy(overrides))
+    _validate_values(cfg)
     return cfg
+
+
+def _validate_values(cfg):
+    integer_minima = dict(Ngrid=2, pad=2, maxit=0, conv_window=1, linesearch_max=1,
+                          linesearch_stall=1, cg_restart=0, check=0, rng=0,
+                          nseeds=1, validate_N=2)
+    for key, minimum in integer_minima.items():
+        v = cfg[key]
+        if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(v) or int(v) != v or v < minimum:
+            raise ValueError(f"{key} must be an integer >= {minimum}, got {v!r}")
+        cfg[key] = int(v)
+    winding = cfg['seed_winding']
+    if isinstance(winding, bool) or not isinstance(winding, numbers.Real) or not math.isfinite(winding) or int(winding) != winding:
+        raise ValueError('seed_winding must be an integer')
+    cfg['seed_winding'] = int(winding)
+    for key, template in CFG_DEFAULTS.items():
+        v = cfg[key]
+        if isinstance(template, bool):
+            if not isinstance(v, bool):
+                raise ValueError(f"{key} must be a boolean")
+        elif isinstance(template, (int, float)):
+            if isinstance(v, bool) or not isinstance(v, numbers.Real) or not math.isfinite(v):
+                raise ValueError(f"{key} must be a finite number, got {v!r}")
+    for key in ('L', 'step', 'step_max', 'precond_shift_min', 'mem_warn_gb'):
+        if cfg[key] <= 0:
+            raise ValueError(f'{key} must be positive')
+    for key in ('s', 'trap_coeff', 'l_z', 'res_tol', 'energy_tol', 'seed_noise', 'seed_phase_noise'):
+        if cfg[key] < 0:
+            raise ValueError(f'{key} must be nonnegative')
+    choices = dict(mode=('smoke','validate','single','tf_only','sweep','convergence'),
+                   dimension=('2d','3d','quasi2d'), kernel=('auto','newton','log','q2d','none'),
+                   seed=('gaussian','tf','triangular'), cg_beta=('pr','pr_precond','none'))
+    for key, allowed in choices.items():
+        value = cfg[key]
+        comparable = str(value).lower() if key in ('dimension','kernel','cg_beta') else value
+        if comparable not in allowed:
+            raise ValueError(f'unknown {key} {value!r}; choose {allowed}')
+    for key in ('sweep_values','conv_Ngrids','conv_box_factors','conv_pads'):
+        if not isinstance(cfg[key], (list,tuple)):
+            raise ValueError(f'{key} must be a list or tuple')
+        for v in cfg[key]:
+            if isinstance(v,bool) or not isinstance(v,numbers.Real) or not math.isfinite(v):
+                raise ValueError(f'{key} must contain finite numbers')
+            if key in ('conv_Ngrids','conv_pads') and (int(v) != v or v < 2):
+                raise ValueError(f'{key} must contain integers >= 2')
+            if key == 'conv_box_factors' and v <= 0:
+                raise ValueError('conv_box_factors must contain positive numbers')

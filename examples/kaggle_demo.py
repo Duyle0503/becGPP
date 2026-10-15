@@ -1,16 +1,17 @@
 # =============================================================================
-#  becGPP on Kaggle -- install from GitHub and run the paper's showcase cases.
+#  becGPP on Kaggle -- run the submitted candidate's showcase configurations.
 #  Turn on the GPU accelerator (Settings -> Accelerator -> GPU) before running.
 #  Paste each numbered block into its own Kaggle cell.
 # =============================================================================
 
 
-# ---- Cell 1 -- install the package straight from GitHub -----------------
-# (double precision + GPU auto-select; the only run-time deps are torch/numpy/matplotlib,
-#  which Kaggle already ships, so the install is fast.)
-!pip install -q git+https://github.com/Duyle0503/becGPP.git@v1.2.1
+# ---- Cell 1 -- install the submitted source archive in a separate cell ---
+# Extract Software_source.zip into /kaggle/working/software, then run:
+# %pip install -e /kaggle/working/software
+# Restart the kernel if a different becGPP version was already imported.
 
 import becgpp
+assert becgpp.__version__ == "1.2.2rc1", "Install the submitted software archive first"
 from becgpp import default_cfg, run, paths
 print("becGPP", becgpp.__version__, "| device:", becgpp.DEV)
 paths.configure("/kaggle/working/out")   # CSVs, figures and checkpoints land here

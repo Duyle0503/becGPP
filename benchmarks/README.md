@@ -36,3 +36,19 @@ python make_paper_numbers.py --figdir figs
   cases end at `maxit` with `iters`=19999: with 1.2.0 the solver kept retrying
   failed line searches once the energy had settled (fixed in 1.2.1). The times
   to each accuracy are read from `traces.csv` and are unaffected.
+
+
+## Exact historical environments
+
+Run these scripts in a separate fresh environment: they deliberately install the
+historical solver, not the current candidate. The v1.1.0 scripts pin commit
+`ac48fb10cf23868838b939c976ae656d89552357`; itp_timing pins
+`db9159f73c68cdb3f0db40d1fbcd0ae0249c671a` (v1.2.0). There is no fallback to main.
+The originally recorded PyTorch/CUDA/hardware is in each results/hardware.json;
+matching software alone does not guarantee identical timing on other hardware.
+The supplied original CSV files remain historical records. Re-running the fixed
+candidate belongs in a separate output directory and must carry its actual version.
+
+Showcase v1.0 data and their saved states are supplied separately under
+reproducibility/legacy_v1_0 in the submission bundle. The figure/table map there
+distinguishes replotting saved states from recomputing a solution.

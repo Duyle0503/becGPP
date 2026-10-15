@@ -71,7 +71,15 @@ def q2d_virial_kernel(u, l_z):
     """W(u) = u dK_eff/du, the kernel entering the virial identity for q2d."""
     x = u * u / (4.0 * l_z * l_z)
     xs = torch.clamp(x, min=1e-300)
-    return 2.0 * xs * (_k0e(xs) - _k1e(xs)) / (math.sqrt(2.0 * math.pi) * l_z)
+    # For large x, subtracting the two Bessel functions loses their O(1/x)
+    # difference. Differentiate the large-distance expansion of K instead:
+    # W = -1/u [1 - 3/(8x) + 45/(128x^2) - 525/(1024x^3) + ...].
+    large = xs > 1000.0
+    regular_x = torch.where(large, torch.ones_like(xs), xs)
+    regular = 2.0 * regular_x * (_k0e(regular_x) - _k1e(regular_x)) / (math.sqrt(2.0 * math.pi) * l_z)
+    invx = 1.0 / xs
+    tail = -(1.0 - 3.0/8.0*invx + 45.0/128.0*invx**2 - 525.0/1024.0*invx**3) / torch.clamp(u, min=1e-300)
+    return torch.where(large, tail, regular)
 
 
 def _polar_self_cell_2d(f, dx, n=48):

@@ -11,6 +11,7 @@ import time
 import torch
 
 from .constants import DEV
+from .config import default_cfg
 from .grid import make_grid, dV, norm_of
 from .interactions import long_range_phi
 from .operators import apply_H, energy_components, compute_residual, observables
@@ -51,22 +52,26 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     Polak-Ribiere CG with periodic restart, a Barzilai-Borwein trial step, and a
     backtracking Armijo line search. Converges in O(1e3) steps where plain
     preconditioned gradient descent stalls at res ~ 1e-2 (esp. in 3D)."""
+    cfg = default_cfg(**cfg)
     if G is None:
         G = make_grid(cfg)
-    psi = psi0.to(DEV) if psi0 is not None else make_seed(G, cfg)
+    psi = psi0.to(device=DEV,dtype=torch.complex128) if psi0 is not None else make_seed(G, cfg)
+    if tuple(psi.shape) != tuple(G['R2'].shape) or not torch.isfinite(psi).all().item():
+        raise ValueError('psi0 must be finite and have the same shape as the grid')
     dv = dV(G)
-    psi = psi / norm_of(psi, G)
+    initial_norm = norm_of(psi,G)
+    if not torch.isfinite(initial_norm).item() or initial_norm.item() <= 0:
+        raise ValueError('psi0 must have a finite, nonzero norm')
+    psi = psi / initial_norm
     maxit = int(cfg["maxit"])
     res_tol = float(cfg["res_tol"])
     etol = float(cfg.get("energy_tol", 1e-9))
     check = int(cfg.get("check", 200))
     alpha = float(cfg.get("step", 1.0))                  # initial trial step
-    alpha_min, alpha_max = 1e-8, float(cfg.get("step_max", 3.0))
+    alpha_min, alpha_max = min(1e-12,float(cfg['step_max'])), float(cfg.get("step_max", 3.0))
     ls_max = int(cfg.get("linesearch_max", 8))          # Armijo halvings per iteration
-    # consecutive failed line searches before stopping. After a failure psi, grad and
-    # the direction are unchanged and the Barzilai-Borwein mix pulls alpha back
-    # towards 2/3 of the (unchanged) BB step, so alpha never reaches alpha_min and
-    # the retries repeat the same trials: the energy has settled at round-off.
+    # A failed CG search is retried with a fresh preconditioned gradient and a
+    # full backtrack to alpha_min. Do not recycle stale CG/BB history on retries.
     stall_max = max(1, int(cfg.get("linesearch_stall", 10)))
     c1 = 1e-4
     shrink, growth = 0.5, 1.1
@@ -108,13 +113,13 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     # optional convergence history (wall time, iteration, energy, residual); the
     # .item() calls above/below synchronize the device, so the times are honest
     record = bool(cfg.get("record_trace", False))
-    trace = [(0.0, 0, E, float("nan"))] if record else None
     grad, mu, _, resid_rel = residual(psi, phi)
+    trace = [(0.0,0,E,resid_rel)] if record else None
     z, sigma = _preconditioner(grad, psi, G, cfg, phi)
     direction = z.clone()
     z_prev = z
-    converged = False
-    stop = "maxit"
+    converged = resid_rel < res_tol
+    stop = 'converged' if converged else 'maxit'
     it = 0
     E_prev = E
     psi_prev = psi
@@ -124,10 +129,14 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     E_ref = E
     n_fail = 0                                           # consecutive failed line searches
     n_iter = 0                                           # iterations performed
-    for it in range(maxit):
+    force_restart = False
+    ls_restarts = 0
+    for it in range(0 if converged else maxit):
         n_iter = it + 1
         z, sigma = _preconditioner(grad, psi, G, cfg, phi)
-        if it == 0 or cg_beta == "none" or (restart_period > 0 and it % restart_period == 0):
+        restarted = force_restart
+        force_restart = False
+        if it == 0 or restarted or cg_beta == "none" or (restart_period > 0 and it % restart_period == 0):
             beta = 0.0
         else:
             y = grad - grad_prev
@@ -147,7 +156,7 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
         if gd <= 0:
             dirc = _proj_tangent(grad, psi, dv)
             gd = _inner_re(grad, dirc, dv)
-        if it > 0:                                            # Barzilai-Borwein trial step
+        if it > 0 and not restarted:                         # Barzilai-Borwein trial step
             svec = psi - psi_prev
             yvec = grad - grad_prev
             sy = _inner_re(svec, yvec, dv)
@@ -162,21 +171,36 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
         psi_t = psi
         Et = E
         phi_t = phi
-        for _ in range(ls_max):
-            psi_t = psi - trial * dirc
-            psi_t = psi_t / norm_of(psi_t, G)
-            Et, phi_t = energy_phi(psi_t)
-            if math.isfinite(Et) and Et <= E - c1 * trial * gd:
-                accepted = True
-                break
-            trial *= shrink
-            if trial < alpha_min:
+        # First try CG with its configured budget, then discard that direction
+        # and search a fresh descent direction over the complete step range.
+        fallback_steps = max(ls_max, int(math.ceil(math.log2(max(alpha_max/alpha_min,1.0))))+1)
+        for attempt,budget in enumerate((ls_max,fallback_steps)):
+            if attempt:
+                ls_restarts += 1
+                force_restart = True
+                dirc = z
+                gd = _inner_re(grad,dirc,dv)
+                trial = min(alpha,1.0)
+            if not math.isfinite(gd) or gd <= 0:
+                continue
+            for _ in range(budget):
+                psi_t = psi - trial * dirc
+                psi_t = psi_t / norm_of(psi_t, G)
+                Et, phi_t = energy_phi(psi_t)
+                if math.isfinite(Et) and Et < E and Et <= E - 2.0*c1 * trial * gd:
+                    accepted = True
+                    break
+                if trial <= alpha_min:
+                    break
+                trial = max(trial*shrink,alpha_min)
+            if accepted:
                 break
         if not accepted:
             n_fail += 1
-            alpha = max(alpha * 0.5, alpha_min)
+            alpha = max(trial,alpha_min)
             direction = z.clone()
-            if alpha <= alpha_min or n_fail >= stall_max:
+            force_restart = True
+            if n_fail >= stall_max:
                 stop = "line_search_stalled"
                 if verbose:
                     print(f"[gs] line search stalled it={it}: E={E:.10g} res={resid_rel:.3e} "
@@ -229,13 +253,14 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     obs = observables(psi, G, cfg)
     obs.update(iters=n_iter, walltime=time.time() - t0, resid_abs=resid_abs,
                resid_rel=resid_rel, min_resid=best_resid, converged=converged,
-               stop_reason=stop, preconditioner_shift=sigma)
+               stop_reason=stop, preconditioner_shift=sigma,line_search_restarts=ls_restarts)
     if record:
         obs["trace"] = trace
     return psi.detach(), G, obs
 
 
 def ground_state_multiseed(cfg, G=None, verbose=False):
+    cfg = default_cfg(**cfg)
     n = int(cfg.get("nseeds", 1))
     if G is None:
         G = make_grid(cfg)
@@ -244,12 +269,14 @@ def ground_state_multiseed(cfg, G=None, verbose=False):
     seed_cycle = ("triangular", "tf", "gaussian") if rotating else ("tf", "gaussian")
     best = None
     Es = []
+    seed_times = []
     for j in range(max(1, n)):
         c = dict(cfg)
         c["rng"] = int(cfg.get("rng", 0)) + j
         c["seed"] = seed_cycle[j % len(seed_cycle)]
         psi, G, obs = ground_state(c, G=G, verbose=verbose)
         Es.append(obs["E"])
+        seed_times.append(obs['walltime'])
         # Variational selection: the energy of any normalized state bounds the ground
         # state from above, so the lowest energy wins even if that candidate stopped
         # before res_tol (its 'converged' flag is reported with it).
@@ -257,6 +284,9 @@ def ground_state_multiseed(cfg, G=None, verbose=False):
         if best is None or score < best[0]:
             best = (score, psi, obs, c)
     _, psi, obs, cbest = best
+    obs['selected_seed_walltime'] = obs['walltime']
+    obs['walltime'] = sum(seed_times)
+    obs['seed_walltimes'] = seed_times
     obs["seed_energy_spread"] = (max(Es) - min(Es)) if len(Es) > 1 else 0.0
     obs["seed_used"] = cbest["seed"]
     obs["seed_energies"] = ";".join(f"{e:.10g}" for e in Es)
