@@ -54,14 +54,15 @@ def test_fft_matches_independent_direct_cell_quadrature(dim,kernel,lz,N):
     np.fill_diagonal(K,selfval)
     rho=np.random.default_rng(7).random((N,)*d)
     ref=(K@rho.ravel()*dx**d).reshape(rho.shape)
-    got=kernel_convolution(torch.tensor(rho),G).numpy()
+    got=kernel_convolution(torch.tensor(rho,device=G['R2'].device),G).cpu().numpy()
     assert np.max(np.abs(got-ref))/max(1.,np.max(np.abs(ref)))<2e-9
 
 @pytest.mark.parametrize('kernel',['newton','log','q2d'])
 def test_padding_2_and_3_agree_for_edge_density(kernel):
     c=cfg(Ngrid=13,kernel=kernel,l_z=.4,G_C=1.)
-    rho=torch.tensor(np.random.default_rng(8).random((13,13)))
-    a=kernel_convolution(rho,make_grid(dict(c,pad=2)))
+    G=make_grid(dict(c,pad=2))
+    rho=torch.tensor(np.random.default_rng(8).random((13,13)),device=G['R2'].device)
+    a=kernel_convolution(rho,G)
     b=kernel_convolution(rho,make_grid(dict(c,pad=3)))
     assert (a-b).abs().max().item()<2e-12
 
