@@ -37,23 +37,33 @@ import os, sys, json, time, math, shutil, subprocess, platform, csv
 REPO, TAG = "https://github.com/Duyle0503/becGPP.git", "v1.2.0"   # version used for the paper
 
 
+BENCHMARK_COMMIT = "db9159f73c68cdb3f0db40d1fbcd0ae0249c671a"
+BENCHMARK_VERSION = "1.2.0"
+
+
 def _install():
+    # Historical benchmarks intentionally run the recorded historical solver.
+    # No branch fallback or acceptance of a different patch release is allowed.
+    from importlib import metadata
+    if "becgpp" in sys.modules:
+        raise RuntimeError("Run this historical benchmark in a fresh Python process")
     try:
-        import becgpp
-        if becgpp.__version__.startswith("1.2"):
+        dist = metadata.distribution("becgpp")
+        direct = json.loads(dist.read_text("direct_url.json") or "{}")
+        actual = direct.get("vcs_info", {}).get("commit_id")
+        if dist.version == BENCHMARK_VERSION and actual == BENCHMARK_COMMIT:
             return
-    except Exception:
+    except metadata.PackageNotFoundError:
         pass
-    for ref in (f"@{TAG}", ""):
-        if subprocess.run([sys.executable, "-m", "pip", "install", "-q", "--no-deps",
-                           "--force-reinstall", f"git+{REPO}{ref}"]).returncode == 0:
-            return
-    raise RuntimeError("could not install becGPP")
+    subprocess.run([sys.executable, "-m", "pip", "install", "--no-deps",
+                    "--force-reinstall", f"git+{REPO}@{BENCHMARK_COMMIT}"], check=True)
+    metadata.distribution("becgpp")  # installation must produce package metadata
 
 
 _install()
 import torch
 import becgpp
+assert becgpp.__version__ == BENCHMARK_VERSION, "Historical benchmark imported the wrong solver; use a clean environment"
 from becgpp import default_cfg, paths, make_grid, ground_state, make_seed
 from becgpp.operators import energy_components
 from becgpp.interactions import long_range_phi, clear_kernel_cache
@@ -91,7 +101,7 @@ def hardware():
                 break
     except OSError:
         pass
-    info = dict(torch=torch.__version__, becgpp=becgpp.__version__, device=DEV,
+    info = dict(torch=torch.__version__, becgpp=becgpp.__version__, source_commit=BENCHMARK_COMMIT, device=DEV,
                 gpu=(torch.cuda.get_device_name(0) if torch.cuda.is_available() else None),
                 cpu_model=cpu, python=platform.python_version())
     json.dump(info, open(os.path.join(ROOT, "hardware.json"), "w"), indent=2)

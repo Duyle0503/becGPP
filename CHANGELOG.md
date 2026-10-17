@@ -1,3 +1,26 @@
+# 1.2.2rc1 — CPC submission candidate (2026-10-15)
+
+CUDA review follow-up (2026-10-17): make random-state and direct-quadrature
+test fixtures device-aware so the full 97-test suite can be selected on CUDA.
+Numerical solver modules are unchanged. The supplied CUDA run exposed fixture
+errors; a CUDA rerun after this test-only repair is still required.
+
+- Recover failed conjugate-gradient searches with a fresh descent direction and
+  complete backtracking; clear stale BB/CG history. Stalls are not labelled as
+  proof of rounding. Enforce complex128 and validate initial states.
+- Resample continuation in physical coordinates even when array shapes match.
+- Exclude radii outside rmax from radial bins.
+- Use coexistence for trapped cubic–quintic TF, reporting finite-grid mass error.
+- Deep-copy configuration lists; validate keys, finite values and integer counts
+  at public entry points; explicitly construct float64 grids.
+- Stabilize the thin-disc virial kernel with a large-argument expansion.
+- Append single-run CSV records, write sweep JSON provenance and sum multi-seed time.
+- Include examples, benchmarks and documentation in source distributions; pin
+  historical benchmark commits and correct regenerated LLL parameters.
+- Add independent direct-convolution, nonlinear, provenance and numerical regressions.
+
+Historical production CSVs retain their original version labels and values.
+
 # Changelog
 
 ## 1.2.1 (2026-10-03)

@@ -106,7 +106,7 @@ def verification(d, figdir):
             for r in sw:
                 print(f"{key}={r[key]:>5}  [{r.get('branch')}] conv={r['converged']} E={f(r['E']):.6f} "
                       f"Nv={r['Nv']} Lz={f(r['Lz']):.2f} R90={f(r['R90']):.3f} TF={f(r['tf_R90']):.3f} "
-                      f"w_LLL={f(r['w_LLL']):.3f} lll={f(r.get('lll_param')):.2f} res={sci(r['resid_rel'])}")
+                      f"w_LLL={f(r['w_LLL']):.3f} lll={abs(f(r.get('beta2', 100 if key == 'G_C' else 200)))*f(r['peak'])/(1+abs(f(r.get('Omega', 1 if key == 'G_C' else r[key])))):.2f} res={sci(r['resid_rel'])}")
     cq = rows(os.path.join(d, "cq_ladder.csv"))
     if cq:
         header("Cubic-quintic ladder (Sec. cq)")
