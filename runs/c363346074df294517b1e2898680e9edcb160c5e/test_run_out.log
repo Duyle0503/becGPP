@@ -1,0 +1,163 @@
+becGPP becGPP_1.2.2 | device=cpu | mode=validate | dim=2D kernel=none
+======================================================================
+VALIDATE: analytic gates (framework certification)
+----------------------------------------------------------------------
+[2D-1] free-space 1/|r| kernel vs analytic Gaussian
+    a=0.5: Egrav rel=1.32e-03  phi0 rel=2.50e-03
+    a=1.0: Egrav rel=3.50e-04  phi0 rel=6.82e-04
+    a=2.0: Egrav rel=9.07e-05  phi0 rel=1.79e-04
+[2D-1b] free-space -ln|r| kernel vs analytic Gaussian
+    a=0.5: Egrav rel=2.29e-03  phi0 rel=2.94e-03
+    a=2.0: Egrav rel=1.22e-04  phi0 rel=4.52e-04
+    a=3.0: Egrav rel=3.51e-05  phi0 rel=1.00e-04
+[2D-1c] quasi-2D kernel K_eff(l_z) vs analytic Gaussian (3D potential of a Gaussian pancake)
+    l_z=0.25 a=1.0: Egrav rel=3.17e-04  phi0 rel=6.03e-04
+    l_z=0.25 a=2.0: Egrav rel=8.50e-05  phi0 rel=1.65e-04
+    l_z=1.0 a=1.0: Egrav rel=2.44e-04  phi0 rel=4.41e-04
+    l_z=1.0 a=2.0: Egrav rel=7.16e-05  phi0 rel=1.33e-04
+[2D-2] LLL single-particle identities (E_sp=1, Lz=m, <r2>=m+1)
+    m= 0: E_sp=1.000000 Lz=-0.00000 <r2>=1.00000 maxerr=2.22e-16
+    m= 1: E_sp=1.000000 Lz=1.00000 <r2>=2.00000 maxerr=4.44e-16
+    m=10: E_sp=1.000000 Lz=10.00000 <r2>=11.00000 maxerr=5.33e-15
+    m=30: E_sp=1.000000 Lz=30.00000 <r2>=31.00000 maxerr=1.07e-14
+[TF] local flat-top: rho0=-3b2/(4b3); mu=b2 rho0+b3 rho0^2; R from int=1
+    2D b2=-0.5 b3=1.0: rho0 rel=0.00e+00 mu rel=0.00e+00
+    2D b2=-1.5 b3=1.0: rho0 rel=0.00e+00 mu rel=0.00e+00
+    3D b2=-0.5 b3=1.0: rho0 rel=0.00e+00 mu rel=0.00e+00
+    3D b2=-1.5 b3=1.0: rho0 rel=0.00e+00 mu rel=0.00e+00
+[3D] free-space 1/|r| kernel: phi(0) of a Gaussian
+    sigma=1.0: phi0=-1.12581 exact=-1.12838 rel=2.28e-03
+    sigma=1.5: phi0=-0.75148 exact=-0.75225 rel=1.02e-03
+[order] free-space kernel convergence order (phi(0) of a Gaussian)
+    2D: fitted order = 1.93   errs=['8.34e-04', '4.81e-04', '2.19e-04', '1.25e-04']
+    2D_log: fitted order = 1.98   errs=['1.23e-02', '6.98e-03', '3.12e-03', '1.76e-03']
+    3D: fitted order = 1.96   errs=['5.01e-03', '2.28e-03', '1.29e-03', '8.29e-04']
+----------------------------------------------------------------------
+[validate] 2D-Coulomb Eg=1.32e-03 phi0=2.50e-03 | 2D-log Eg=2.29e-03 phi0=2.94e-03 | q2D=6.03e-04 | LLL=1.07e-14 | flatTF=0.00e+00 | 3D-phi0=2.28e-03 | kernel_order={'2D': 1.9349851536247127, '2D_log': 1.9845020682328633, '3D': 1.963340502805463} | PASS=True
+[validate] thresholds relax on coarse N; use validate_N=512 for publication numbers
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=2D kernel=none
+  [gs] it=0 E=3.98936172 res=9.85e-02 best=9.85e-02 step=1.00e+00
+[gs] converged it=116: E=3.945944195 res=5.844e-07
+----------------------------------------------------------------------
+[single] 2D s=2 Omega=0.0 beta2=100.0 beta3=0.0 G_C=0.0 kernel=none
+         E=3.94594419 mu=5.759754 Lz=-0.00000 Nv=0
+         R90=2.8504 TF(repulsive_parabola) R90=2.7951 virial_rel=3.67e-08 w_LLL=nan
+         resid=5.84e-07 converged=True it=117
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=2D kernel=none
+  [gs] it=0 E=3.27058837 res=1.77e-01 best=1.77e-01 step=1.00e+00
+  [gs] it=200 E=3.19747121 res=7.66e-03 best=1.87e-03 step=5.74e-01
+  [gs] it=400 E=3.19522337 res=1.65e-02 best=9.47e-04 step=4.92e-01
+  [gs] it=600 E=3.19278763 res=6.73e-03 best=7.86e-04 step=1.75e-01
+  [gs] it=800 E=3.19150633 res=6.28e-03 best=5.23e-04 step=3.08e-01
+  [gs] it=1000 E=3.19088355 res=8.68e-04 best=3.33e-04 step=2.11e+00
+  [gs] it=1200 E=3.19047196 res=3.02e-04 best=2.22e-04 step=2.32e-01
+  [gs] it=1400 E=3.19042869 res=2.09e-04 best=1.14e-04 step=2.26e-01
+  [gs] it=1600 E=3.19039110 res=2.24e-04 best=7.03e-05 step=1.01e-01
+  [gs] it=1800 E=3.19037219 res=3.28e-05 best=1.72e-05 step=2.88e-01
+  [gs] it=2000 E=3.19037155 res=3.73e-05 best=1.09e-05 step=1.89e-01
+  [gs] it=2200 E=3.19037121 res=2.18e-05 best=5.15e-06 step=9.35e-01
+  [gs] it=2400 E=3.19037110 res=1.34e-05 best=2.28e-06 step=4.22e-01
+[gs] converged it=2443: E=3.190371099 res=5.372e-07
+----------------------------------------------------------------------
+[single] 2D s=2 Omega=0.8 beta2=100.0 beta3=0.0 G_C=0.0 kernel=none
+         E=3.19037110 mu=4.349420 Lz=4.36885 Nv=7
+         R90=3.6213 TF(repulsive_parabola) R90=3.5822 virial_rel=2.81e-08 w_LLL=0.9333293694436107
+         resid=5.37e-07 converged=True it=2444
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=2D kernel=newton
+  [gs] it=0 E=0.98379537 res=4.02e-01 best=4.02e-01 step=1.00e+00
+[gs] converged it=96: E=0.9587200837 res=9.016e-07
+----------------------------------------------------------------------
+[single] 2D s=2 Omega=0.0 beta2=50.0 beta3=0.0 G_C=5.0 kernel=newton
+         E=0.95872008 mu=0.633669 Lz=-0.00000 Nv=0
+         R90=2.0616 TF(nonlocal_compressed) R90=1.9039 virial_rel=5.70e-04 w_LLL=nan
+         resid=9.02e-07 converged=True it=97
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=2D kernel=none
+  [gs] it=0 E=11.12967135 res=6.40e+00 best=4.74e+00 step=1.00e+00
+[gs] converged it=133: E=-5.663318504 res=7.385e-07
+----------------------------------------------------------------------
+[single] 2D s=0 Omega=0.0 beta2=-50.0 beta3=50.0 G_C=0.0 kernel=none
+         E=-5.66331850 mu=-7.648381 Lz=-0.00000 Nv=0
+         R90=0.7656 TF(local_flattop) R90=0.6003 virial_rel=9.91e-08 w_LLL=nan
+         resid=7.39e-07 converged=True it=134
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=quasi2D kernel=q2d
+  [gs] it=0 E=1.32563276 res=2.82e-01 best=2.82e-01 step=1.00e+00
+[gs] converged it=130: E=1.299931582 res=8.739e-07
+----------------------------------------------------------------------
+[single] quasi2D s=2 Omega=0.0 beta2=50.0 beta3=0.0 G_C=5.0 kernel=q2d
+         E=1.29993158 mu=1.216793 Lz=0.00000 Nv=0
+         R90=2.2361 TF(nonlocal_compressed) R90=2.0156 virial_rel=4.63e-04 w_LLL=nan
+         resid=8.74e-07 converged=True it=131
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=3D kernel=none
+  [gs] it=0 E=2.94282700 res=1.38e-01 best=1.38e-01 step=1.00e+00
+[gs] converged it=115: E=2.867920411 res=5.780e-07
+----------------------------------------------------------------------
+[single] 3D s=2 Omega=0.0 beta2=100.0 beta3=0.0 G_C=0.0 kernel=none
+         E=2.86792041 mu=3.713216 Lz=-0.00000 Nv=0
+         R90=2.5156 TF(repulsive_parabola) R90=2.2810 virial_rel=3.55e-09 w_LLL=nan
+         oblateness R_perp/R_z(norm)=1.000 (1=sphere, >1 oblate)  R_perp=1.481 R_z=1.047
+         resid=5.78e-07 converged=True it=116
+
+Done. Output in: test_run_out
+becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=3D kernel=newton
+  [gs] it=0 E=-3.39133850 res=2.57e-01 best=2.57e-01 step=1.00e+00
+[gs] converged it=165: E=-5.316885524 res=9.711e-07
+----------------------------------------------------------------------
+[single] 3D s=0 Omega=0.0 beta2=0.0 beta3=0.0 G_C=10.0 kernel=newton
+         E=-5.31688552 mu=-15.761825 Lz=-0.00000 Nv=0
+         R90=0.7012 TF() R90=nan virial_rel=7.26e-03 w_LLL=nan
+         oblateness R_perp/R_z(norm)=1.000 (1=sphere, >1 oblate)  R_perp=0.389 R_z=0.275
+         resid=9.71e-07 converged=True it=166
+
+Done. Output in: test_run_out
+
+Wrote test_run_out/results.json (47.6 s on cpu)
+validation gate        passed    got=True                   expected=True                   ok
+2D_harmonic            E         got=3.9459441947472893     expected=3.9459441947472893     ok
+2D_harmonic            mu        got=5.759753620144548      expected=5.759753620144548      ok
+2D_harmonic            R90       got=2.8504385627614877     expected=2.8504385627614877     ok
+2D_harmonic            Nv        got=0                      expected=0                      ok
+2D_harmonic            converged got=True                   expected=True                   ok
+2D_rotating_lattice    E         got=3.1903710988095852     expected=3.1903710988095852     ok
+2D_rotating_lattice    mu        got=4.349420005009042      expected=4.349420005009042      ok
+2D_rotating_lattice    R90       got=3.62125068562104       expected=3.62125068562104       ok
+2D_rotating_lattice    Nv        got=7                      expected=7                      ok
+2D_rotating_lattice    converged got=True                   expected=True                   ok
+2D_selfgrav_newton     E         got=0.95872008368501       expected=0.95872008368501       ok
+2D_selfgrav_newton     mu        got=0.6336692049042076     expected=0.6336692049042076     ok
+2D_selfgrav_newton     R90       got=2.061552813052772      expected=2.061552813052772      ok
+2D_selfgrav_newton     Nv        got=0                      expected=0                      ok
+2D_selfgrav_newton     converged got=True                   expected=True                   ok
+2D_free_cubic_quintic  E         got=-5.663318503712567     expected=-5.663318503712567     ok
+2D_free_cubic_quintic  mu        got=-7.648381363659208     expected=-7.648381363659208     ok
+2D_free_cubic_quintic  R90       got=0.7655835217768573     expected=0.7655835217768573     ok
+2D_free_cubic_quintic  Nv        got=0                      expected=0                      ok
+2D_free_cubic_quintic  converged got=True                   expected=True                   ok
+quasi2D_q2d            E         got=1.2999315817807373     expected=1.2999315817807373     ok
+quasi2D_q2d            mu        got=1.216793307534755      expected=1.216793307534755      ok
+quasi2D_q2d            R90       got=2.2360679774961514     expected=2.2360679774961514     ok
+quasi2D_q2d            Nv        got=0                      expected=0                      ok
+quasi2D_q2d            converged got=True                   expected=True                   ok
+3D_harmonic            E         got=2.867920410579068      expected=2.867920410579068      ok
+3D_harmonic            mu        got=3.7132156027857213     expected=3.7132156027857213     ok
+3D_harmonic            R90       got=2.5155764746606084     expected=2.5155764746606084     ok
+3D_harmonic            Nv        got=0                      expected=0                      ok
+3D_harmonic            converged got=True                   expected=True                   ok
+3D_schrodinger_newton  E         got=-5.316885523610447     expected=-5.316885523610447     ok
+3D_schrodinger_newton  mu        got=-15.761825403334129    expected=-15.761825403334129    ok
+3D_schrodinger_newton  R90       got=0.7011696102923103     expected=0.7011696102923103     ok
+3D_schrodinger_newton  Nv        got=0                      expected=0                      ok
+3D_schrodinger_newton  converged got=True                   expected=True                   ok
+
+CHECK PASSED against reference becGPP_1.2.2 (Linux-6.17.0-1022-azure-x86_64-with-glibc2.39)
