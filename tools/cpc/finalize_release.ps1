@@ -8,6 +8,7 @@ param(
 )
 $ErrorActionPreference = "Stop"
 $Tag = "v1.2.2"
+$TagCommit = "1c7eef613d147b6857375f9a61342b38cae1bc86"   # verified by GitHub CI (109 tests, reference run)
 if (-not $Root) {
     if ($env:BECGPP_CPC_ROOT) { $Root = $env:BECGPP_CPC_ROOT }
     else { $Root = (Resolve-Path (Join-Path $PSScriptRoot "..\..")).Path }
@@ -18,8 +19,18 @@ $Repo = Join-Path $Root "code\becGPP"
 function Step($msg) { Write-Host "`n=== $msg ===" -ForegroundColor Cyan }
 function Run($exe, [string[]]$argv) { & $exe @argv; if ($LASTEXITCODE -ne 0) { throw "$exe $($argv -join ' ') failed ($LASTEXITCODE)" } }
 
-Step "1. Check out $Tag in code\becGPP"
+Step "1. Create (if needed) and check out $Tag in code\becGPP"
 Run git @("-C", $Repo, "fetch", "--tags", "origin")
+$remoteTag = git -C $Repo ls-remote --tags origin "refs/tags/$Tag"
+if (-not $remoteTag) {
+    $localTag = git -C $Repo tag --list $Tag
+    if (-not $localTag) {
+        Run git @("-C", $Repo, "tag", "-a", $Tag, $TagCommit, "-m", "becGPP 1.2.2 - release described in the Computer Physics Communications article")
+    }
+    Run git @("-C", $Repo, "push", "origin", $Tag)
+}
+$tagged = (git -C $Repo rev-parse "$Tag^{commit}").Trim()
+if ($tagged -ne $TagCommit) { throw "$Tag points to $tagged, expected $TagCommit" }
 Run git @("-C", $Repo, "checkout", "--force", $Tag)
 $untracked = git -C $Repo status --porcelain
 if ($untracked) { Write-Host $untracked; throw "code\becGPP is not clean after checkout; move the files above out of the repository and rerun." }
