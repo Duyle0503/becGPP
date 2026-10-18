@@ -1,7 +1,9 @@
 name: CPU test run
 
-# Runs examples/cpu_test_run.py on a CPU and uploads its outputs; with the
-# shipped reference present it also checks the results against it.
+# Runs the full pytest suite and examples/cpu_test_run.py on a CPU. With the
+# shipped reference present the test run is also checked against it. Results
+# (JUnit XML, test-run outputs, logs) are uploaded as an artifact and recorded
+# on the `ci-results` branch under runs/<commit>/ for provenance.
 on:
   workflow_dispatch:
   pull_request:
@@ -9,11 +11,19 @@ on:
   push:
     tags: ["v*"]
 
+permissions:
+  contents: write
+
 jobs:
   test-run:
     runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+      SRC_SHA: ${{ github.event.pull_request.head.sha || github.sha }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -22,15 +32,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install -e ".[yaml,test]"
+          python -c "import sys, torch, becgpp, platform; print(becgpp.__version__, torch.__version__, sys.version.split()[0], platform.platform())" | tee environment.txt
+      - name: Full test suite
+        run: pytest -q --junitxml=pytest_cpu.xml 2>&1 | tee pytest_cpu.log
       - name: Reference test run
-        env:
-          MPLBACKEND: Agg
         run: |
           if [ -f data/sample_output/cpu_test_run/expected_results.json ]; then
-            python examples/cpu_test_run.py --out test_run_out --check | tee test_run_out.log
+            python examples/cpu_test_run.py --out test_run_out --check 2>&1 | tee test_run_out.log
           else
-            python examples/cpu_test_run.py --out test_run_out | tee test_run_out.log
+            python examples/cpu_test_run.py --out test_run_out 2>&1 | tee test_run_out.log
           fi
+          exit ${PIPESTATUS[0]}
       - name: Upload outputs
         if: always()
         uses: actions/upload-artifact@v4
@@ -39,3 +51,28 @@ jobs:
           path: |
             test_run_out
             test_run_out.log
+            pytest_cpu.xml
+            pytest_cpu.log
+            environment.txt
+      - name: Record results on the ci-results branch
+        if: always()
+        run: |
+          set -e
+          mkdir -p /tmp/pub
+          for f in test_run_out test_run_out.log pytest_cpu.xml pytest_cpu.log environment.txt; do
+            [ -e "$f" ] && cp -r "$f" /tmp/pub/
+          done
+          echo "${{ github.run_id }} ${{ github.event_name }} ${{ job.status }}" > /tmp/pub/run.txt
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git fetch -q origin ci-results; then
+            git checkout -q -B ci-results FETCH_HEAD
+          else
+            git checkout -q --orphan ci-results
+            git rm -rfq .
+          fi
+          git clean -fdxq
+          dest="runs/${SRC_SHA}"
+          rm -rf "$dest"; mkdir -p "$dest"; cp -r /tmp/pub/. "$dest/"
+          git add runs
+          git commit -qm "CPU test run for ${SRC_SHA}" && git push -q origin ci-results
