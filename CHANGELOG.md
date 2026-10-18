@@ -3,7 +3,13 @@
 CUDA review follow-up (2026-10-17): make random-state and direct-quadrature
 test fixtures device-aware so the full 97-test suite can be selected on CUDA.
 Numerical solver modules are unchanged. The supplied CUDA run exposed fixture
-errors; a CUDA rerun after this test-only repair is still required.
+errors. A separate Tesla T4 rerun at commit 75f0a30 subsequently passed all 97
+tests in 29.52 seconds, with no errors, skips or excluded cases (reviewed
+2026-10-18). The original physics batch and review flags are retained.
+
+CPC tooling follow-up (2026-10-18): publish the one-cell GPU runners and bundle
+audit/packaging helpers under tools/cpc, with workspace discovery for the separate
+code/data/latex bundle. Numerical modules and test assertions are unchanged.
 
 - Recover failed conjugate-gradient searches with a fresh descent direction and
   complete backtracking; clear stale BB/CG history. Stalls are not labelled as

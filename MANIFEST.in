@@ -4,3 +4,4 @@ recursive-include benchmarks *.py *.md *.json *.csv *.txt *.pdf
 recursive-include tests *.py
 recursive-include data *.md *.csv *.json *.png
 recursive-include docs *.md *.json
+recursive-include tools *.py *.md *.ipynb

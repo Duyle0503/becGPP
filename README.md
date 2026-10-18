@@ -207,6 +207,13 @@ published GitHub tag. Install it from this directory with `pip install -e ".[yam
 Historical paper timings remain labelled v1.0/v1.1/v1.2.0 and are not timings of
 this candidate. See `docs/SUBMISSION_CHANGES.md` and `benchmarks/README.md`.
 
+The repaired regression suite passed all 97 tests on CPU and in a separate
+Tesla T4 CUDA run, with no excluded cases or skips. The original physics batch
+and its convergence review flags are retained. See
+[`docs/CUDA_REVIEW_2026_10_17.md`](docs/CUDA_REVIEW_2026_10_17.md).
+Portable one-cell GPU runners and helpers for the separate `code/data/latex`
+submission bundle are in [`tools/cpc/`](tools/cpc/README.md).
+
 The trapped attractive cubic–repulsive quintic TF branch uses liquid/vacuum
 coexistence. Its discontinuity may prevent exact unit mass on a finite grid;
 `mass_error` and `converged` report this instead of renormalizing a physical
