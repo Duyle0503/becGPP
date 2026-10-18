@@ -1,4 +1,22 @@
-# 1.2.2rc1 — CPC submission candidate (2026-10-15)
+# 1.2.2 (2026-10-18)
+
+Release described in the Computer Physics Communications article. The discrete
+energy functional, kernels, solver and diagnostics are those of 1.2.2rc1.
+
+- `default_cfg` warns (`RuntimeWarning`) when rotation leaves the energy
+  unbounded below: `Omega != 0` with `s < 2`, or `s = 2` with
+  `Omega**2 > 2*trap_coeff` (`tests/test_regime_warning.py`).
+- `examples/cpu_test_run.py`: a reference test run on a CPU (a few minutes) that
+  exercises the validation gate and seven small configurations covering every
+  kernel, 2D/3D/quasi-2D, rotation and the cubic-quintic terms; `--check`
+  compares with the shipped reference.
+- `data/sample_output/` regenerated with this version from that test run
+  (CSV, per-run JSON, figures and `expected_results.json`); the version-1.0
+  scan files were removed (they remain in the git history).
+- README: install from the archive or the release tag, regime of validity,
+  complete package layout.
+
+# 1.2.2rc1 — release candidate (2026-10-15)
 
 CUDA review follow-up (2026-10-17): make random-state and direct-quadrature
 test fixtures device-aware so the full 97-test suite can be selected on CUDA.
@@ -24,6 +42,9 @@ code/data/latex bundle. Numerical modules and test assertions are unchanged.
 - Include examples, benchmarks and documentation in source distributions; pin
   historical benchmark commits and correct regenerated LLL parameters.
 - Add independent direct-convolution, nonlinear, provenance and numerical regressions.
+- Warn (`RuntimeWarning`) when rotation leaves the energy unbounded below:
+  `Omega != 0` with `s < 2`, or `s = 2` with `Omega**2 > 2*trap_coeff`
+  (`tests/test_regime_warning.py`). Numerical modules are unchanged.
 
 Historical production CSVs retain their original version labels and values.
 

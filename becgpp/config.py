@@ -14,6 +14,7 @@ switched on explicitly by the user.
 import copy
 import math
 import numbers
+import warnings
 
 CFG_DEFAULTS = dict(
     mode         = "smoke",        # smoke | validate | single | tf_only | sweep | convergence
@@ -168,3 +169,25 @@ def _validate_values(cfg):
                 raise ValueError(f'{key} must contain integers >= 2')
             if key == 'conv_box_factors' and v <= 0:
                 raise ValueError('conv_box_factors must contain positive numbers')
+    _warn_unbounded_rotation(cfg)
+
+
+def _warn_unbounded_rotation(cfg):
+    """Warn when rotation makes the energy unbounded below (no ground state).
+
+    In the rotating frame the trap c r^s is offset by -Omega^2 (x^2+y^2)/2. A
+    packet displaced to R0 and co-rotating at Omega R0 has energy
+    C + c R0^s - Omega^2 R0^2 / 2, so a ground state requires Omega = 0, s > 2,
+    or s = 2 with Omega^2 <= 2c. A finite box hides this but does not cure it.
+    """
+    O = abs(float(cfg["Omega"]))
+    s = float(cfg["s"])
+    c = float(cfg["trap_coeff"])
+    if O == 0.0:
+        return
+    if s < 2.0 or (s == 2.0 and O * O > 2.0 * c * (1.0 + 1e-12)):
+        warnings.warn(
+            f"Omega={cfg['Omega']} with trap {c} r^{s}: the rotating-frame energy is "
+            "unbounded below (needs s > 2, or s = 2 with Omega^2 <= 2*trap_coeff); "
+            "results depend on the finite box and are not continuum ground states.",
+            RuntimeWarning, stacklevel=3)

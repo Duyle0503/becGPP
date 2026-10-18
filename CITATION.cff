@@ -1,8 +1,8 @@
 cff-version: 1.2.0
 message: "If you use becGPP in your research, please cite both the software and the accompanying paper."
 title: "becGPP: a GPU-accelerated spectral ground-state solver for trapped, rotating and self-gravitating Bose-Einstein condensates"
-version: 1.2.2rc1
-date-released: 2026-10-15
+version: 1.2.2
+date-released: 2026-10-18
 license: MIT
 authors:
   - family-names: Le

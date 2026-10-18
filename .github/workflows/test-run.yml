@@ -1,0 +1,41 @@
+name: CPU test run
+
+# Runs examples/cpu_test_run.py on a CPU and uploads its outputs; with the
+# shipped reference present it also checks the results against it.
+on:
+  workflow_dispatch:
+  pull_request:
+    branches: [main]
+  push:
+    tags: ["v*"]
+
+jobs:
+  test-run:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install CPU PyTorch and the package
+        run: |
+          python -m pip install --upgrade pip
+          pip install torch --index-url https://download.pytorch.org/whl/cpu
+          pip install -e ".[yaml,test]"
+      - name: Reference test run
+        env:
+          MPLBACKEND: Agg
+        run: |
+          if [ -f data/sample_output/cpu_test_run/expected_results.json ]; then
+            python examples/cpu_test_run.py --out test_run_out --check | tee test_run_out.log
+          else
+            python examples/cpu_test_run.py --out test_run_out | tee test_run_out.log
+          fi
+      - name: Upload outputs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: cpu-test-run
+          path: |
+            test_run_out
+            test_run_out.log
