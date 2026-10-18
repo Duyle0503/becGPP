@@ -1,0 +1,227 @@
+{
+  "code_version": "becGPP_1.2.2",
+  "package_version": "1.2.2",
+  "torch": "2.14.1+cpu",
+  "python": "3.12.15",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "device": "cpu",
+  "validation": {
+    "passed": true,
+    "mg": 0.001315809510642442,
+    "mp": 0.002496882483899342,
+    "mlg": 0.002290193887622957,
+    "mlp": 0.0029418802251303987,
+    "mq": 0.0006032566908751659,
+    "ml": 1.7763568394002505e-15,
+    "mtf": 0.0,
+    "m3": 0.0022766585849950858,
+    "kernel_orders": "{'2D': 1.9349851536268816, '2D_log': 1.9845020682357477, '3D': 1.9633405028052717}"
+  },
+  "cases": {
+    "2D_harmonic": {
+      "config": {
+        "dimension": "2D",
+        "s": 2,
+        "Omega": 0.0,
+        "beta2": 100.0,
+        "beta3": 0.0,
+        "G_C": 0.0,
+        "kernel": "none",
+        "L": 8.0,
+        "Ngrid": 64,
+        "seed": "tf"
+      },
+      "result": {
+        "E": 3.94594419476889,
+        "mu": 5.759753671358278,
+        "Lz": 1.7272024715011988e-15,
+        "Nv": 0,
+        "R90": 2.8504385627545124,
+        "virial_rel": 2.6679269434649716e-08,
+        "resid_rel": 8.630456375592663e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 115,
+        "tf_kind": "repulsive_parabola",
+        "tf_R90": 2.7950849718747373,
+        "walltime_s": 0.78
+      }
+    },
+    "2D_rotating_lattice": {
+      "config": {
+        "dimension": "2D",
+        "s": 2,
+        "Omega": 0.8,
+        "beta2": 100.0,
+        "beta3": 0.0,
+        "G_C": 0.0,
+        "kernel": "none",
+        "L": 9.0,
+        "Ngrid": 96,
+        "seed": "triangular"
+      },
+      "result": {
+        "E": 3.190371098564956,
+        "mu": 4.3494199618167455,
+        "Lz": 4.3688486614197215,
+        "Nv": 7,
+        "R90": 3.621244311010771,
+        "virial_rel": 9.814646534807067e-08,
+        "resid_rel": 8.89683879214696e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 2173,
+        "tf_kind": "repulsive_parabola",
+        "tf_R90": 3.582182470226775,
+        "walltime_s": 4.93
+      }
+    },
+    "2D_selfgrav_newton": {
+      "config": {
+        "dimension": "2D",
+        "s": 2,
+        "Omega": 0.0,
+        "beta2": 50.0,
+        "beta3": 0.0,
+        "G_C": 5.0,
+        "kernel": "newton",
+        "L": 8.0,
+        "Ngrid": 64,
+        "seed": "tf"
+      },
+      "result": {
+        "E": 0.9587200836854399,
+        "mu": 0.6336691774842866,
+        "Lz": -4.5867858492385525e-17,
+        "Nv": 0,
+        "R90": 2.0615528128336345,
+        "virial_rel": 0.000570391695580449,
+        "resid_rel": 9.826717580214915e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 127,
+        "tf_kind": "nonlocal_compressed",
+        "tf_R90": 1.9039432764659772,
+        "walltime_s": 0.8
+      }
+    },
+    "2D_free_cubic_quintic": {
+      "config": {
+        "dimension": "2D",
+        "s": 0,
+        "Omega": 0.0,
+        "beta2": -50.0,
+        "beta3": 50.0,
+        "G_C": 0.0,
+        "kernel": "none",
+        "L": 3.0,
+        "Ngrid": 64,
+        "seed": "tf"
+      },
+      "result": {
+        "E": -5.663318503708869,
+        "mu": -7.648380720538565,
+        "Lz": -3.0173551957313648e-12,
+        "Nv": 0,
+        "R90": 0.7655835215075066,
+        "virial_rel": 5.418575921319329e-09,
+        "resid_rel": 9.859130926551372e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 140,
+        "tf_kind": "local_flattop",
+        "tf_R90": 0.6002928972593295,
+        "walltime_s": 0.67
+      }
+    },
+    "quasi2D_q2d": {
+      "config": {
+        "dimension": "quasi2D",
+        "s": 2,
+        "Omega": 0.0,
+        "beta2": 50.0,
+        "beta3": 0.0,
+        "G_C": 5.0,
+        "kernel": "q2d",
+        "l_z": 0.5,
+        "L": 8.0,
+        "Ngrid": 64,
+        "seed": "tf"
+      },
+      "result": {
+        "E": 1.2999315817805752,
+        "mu": 1.2167933069860797,
+        "Lz": -4.547897816532388e-15,
+        "Nv": 0,
+        "R90": 2.2360679771667074,
+        "virial_rel": 0.00046332397840105914,
+        "resid_rel": 8.690782892318573e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 98,
+        "tf_kind": "nonlocal_compressed",
+        "tf_R90": 2.0155644370746373,
+        "walltime_s": 0.82
+      }
+    },
+    "3D_harmonic": {
+      "config": {
+        "dimension": "3D",
+        "s": 2,
+        "Omega": 0.0,
+        "beta2": 100.0,
+        "beta3": 0.0,
+        "G_C": 0.0,
+        "kernel": "none",
+        "L": 6.0,
+        "Ngrid": 32,
+        "seed": "tf"
+      },
+      "result": {
+        "E": 2.867920410584996,
+        "mu": 3.7132155329602137,
+        "Lz": 1.163562122362812e-14,
+        "Nv": 0,
+        "R90": 2.515576463597125,
+        "virial_rel": 1.7655484761444517e-07,
+        "resid_rel": 8.452839664931798e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 100,
+        "tf_kind": "repulsive_parabola",
+        "tf_R90": 2.2810359488618324,
+        "walltime_s": 1.26
+      }
+    },
+    "3D_schrodinger_newton": {
+      "config": {
+        "dimension": "3D",
+        "s": 0,
+        "Omega": 0.0,
+        "beta2": 0.0,
+        "beta3": 0.0,
+        "G_C": 10.0,
+        "kernel": "newton",
+        "L": 3.0,
+        "Ngrid": 32,
+        "seed": "gaussian"
+      },
+      "result": {
+        "E": -5.316885523610446,
+        "mu": -15.761825403334136,
+        "Lz": -2.1164028087193593e-11,
+        "Nv": 0,
+        "R90": 0.7011696102923103,
+        "virial_rel": 0.0072577310196302505,
+        "resid_rel": 9.710927942996043e-07,
+        "converged": true,
+        "stop_reason": "converged",
+        "iters": 166,
+        "tf_kind": "",
+        "tf_R90": NaN,
+        "walltime_s": 1.94
+      }
+    }
+  },
+  "total_walltime_s": 49.6
+}
