@@ -43,6 +43,11 @@ jobs:
             python examples/cpu_test_run.py --out test_run_out 2>&1 | tee test_run_out.log
           fi
           exit ${PIPESTATUS[0]}
+      - name: Build source and wheel distributions
+        run: |
+          pip install build
+          python -m build --outdir dist
+          sha256sum dist/* | tee dist/SHA256SUMS.txt
       - name: Upload outputs
         if: always()
         uses: actions/upload-artifact@v4
@@ -54,12 +59,13 @@ jobs:
             pytest_cpu.xml
             pytest_cpu.log
             environment.txt
+            dist
       - name: Record results on the ci-results branch
         if: always()
         run: |
           set -e
           mkdir -p /tmp/pub
-          for f in test_run_out test_run_out.log pytest_cpu.xml pytest_cpu.log environment.txt; do
+          for f in test_run_out test_run_out.log pytest_cpu.xml pytest_cpu.log environment.txt dist; do
             [ -e "$f" ] && cp -r "$f" /tmp/pub/
           done
           echo "${{ github.run_id }} ${{ github.event_name }} ${{ job.status }}" > /tmp/pub/run.txt
