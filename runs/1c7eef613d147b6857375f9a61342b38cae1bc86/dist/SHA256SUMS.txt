@@ -1,0 +1,2 @@
+04c155a00286a0d7e47f131332b91cf52d15dbd62e951abe2ca0069be2e2e08b  dist/becgpp-1.2.2-py3-none-any.whl
+18cfdc7dd34427dc1af357b69dcb491dde4f4985c9e65b4121f818b57c133e2b  dist/becgpp-1.2.2.tar.gz
