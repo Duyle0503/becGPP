@@ -122,7 +122,7 @@ becGPP becGPP_1.2.2 | device=cpu | mode=single | dim=3D kernel=newton
 
 Done. Output in: test_run_out
 
-Wrote test_run_out/results.json (50.6 s on cpu)
+Wrote test_run_out/results.json (51.4 s on cpu)
 validation gate        passed    got=True                   expected=True                   ok
 2D_harmonic            E         got=3.9459441947472893     expected=3.9459441947472893     ok
 2D_harmonic            mu        got=5.759753620144548      expected=5.759753620144548      ok

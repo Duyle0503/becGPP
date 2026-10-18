@@ -107,7 +107,7 @@
     "points_per_R90": 8.246211252211088,
     "rid": "cpu_test_run_55dfaec507",
     "iters": 97,
-    "walltime": 0.19091057777404785,
+    "walltime": 0.19224166870117188,
     "resid_rel": 9.015913558810105e-07,
     "min_resid": 9.015913558810105e-07,
     "converged": true,

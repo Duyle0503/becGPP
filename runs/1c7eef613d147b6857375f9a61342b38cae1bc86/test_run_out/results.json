@@ -44,7 +44,7 @@
         "iters": 117,
         "tf_kind": "repulsive_parabola",
         "tf_R90": 2.7950849718747373,
-        "walltime_s": 1.04
+        "walltime_s": 1.07
       }
     },
     "2D_rotating_lattice": {
@@ -73,7 +73,7 @@
         "iters": 2444,
         "tf_kind": "repulsive_parabola",
         "tf_R90": 3.582182470226775,
-        "walltime_s": 6.83
+        "walltime_s": 7.03
       }
     },
     "2D_selfgrav_newton": {
@@ -102,7 +102,7 @@
         "iters": 97,
         "tf_kind": "nonlocal_compressed",
         "tf_R90": 1.9039432764659772,
-        "walltime_s": 1.08
+        "walltime_s": 1.1
       }
     },
     "2D_free_cubic_quintic": {
@@ -131,7 +131,7 @@
         "iters": 134,
         "tf_kind": "local_flattop",
         "tf_R90": 0.6002928972593295,
-        "walltime_s": 0.97
+        "walltime_s": 1.0
       }
     },
     "quasi2D_q2d": {
@@ -161,7 +161,7 @@
         "iters": 131,
         "tf_kind": "nonlocal_compressed",
         "tf_R90": 2.0155644370746373,
-        "walltime_s": 1.23
+        "walltime_s": 1.28
       }
     },
     "3D_harmonic": {
@@ -190,7 +190,7 @@
         "iters": 116,
         "tf_kind": "repulsive_parabola",
         "tf_R90": 2.2810359488618324,
-        "walltime_s": 1.78
+        "walltime_s": 1.87
       }
     },
     "3D_schrodinger_newton": {
@@ -219,9 +219,9 @@
         "iters": 166,
         "tf_kind": "",
         "tf_R90": NaN,
-        "walltime_s": 3.36
+        "walltime_s": 3.34
       }
     }
   },
-  "total_walltime_s": 50.6
+  "total_walltime_s": 51.4
 }
