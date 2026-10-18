@@ -1,7 +1,8 @@
 """Build portable submission archives from code/, data/, latex/; use only stdlib.
 
-The package is a submission candidate. Corrected CPU and CUDA regressions have
-passed; author confirmations remain pending. See README.md and GPU_ASSESSMENT.md.
+Release 1.2.2: the software archive is the tagged release; the reproducibility
+data add its CPU CI record and, once supplied, its CUDA test run to the earlier
+GPU evidence. Author declarations remain separate. See README.md.
 """
 from pathlib import Path
 import hashlib
@@ -63,12 +64,14 @@ def main():
     latex_members += [(latex / "figs" / name, "latex/figs/" + name) for name in figures]
     latex_source = make_zip("LaTeX_source.zip", latex_members)
     evidence = make_zip("Verification.zip", list(tree(ROOT / "data/review", "data/review")) + list(tree(ROOT / "data/verification", "data/verification")))
-    raw = make_zip("Reproducibility_data.zip", list(tree(ROOT / "data/raw/gpu_2026_10_17", "data/raw/gpu_2026_10_17")) + list(tree(ROOT / "data/raw/gpu_retest_2026_10_17", "data/raw/gpu_retest_2026_10_17")) + list(tree(ROOT / "data/history/legacy_v1_0", "data/history/legacy_v1_0", {"__pycache__"})) + [(ROOT / "data/README.md", "data/README.md"), (ROOT / "data/raw/archives/becgpp_gpu_20261017T141120Z_cwk2teki.zip", "data/raw/archives/becgpp_gpu_20261017T141120Z_cwk2teki.zip")])
+    raw = make_zip("Reproducibility_data.zip", list(tree(ROOT / "data/raw/gpu_2026_10_17", "data/raw/gpu_2026_10_17")) + list(tree(ROOT / "data/raw/gpu_retest_2026_10_17", "data/raw/gpu_retest_2026_10_17")) + list(tree(ROOT / "data/history/legacy_v1_0", "data/history/legacy_v1_0", {"__pycache__"})) + list(tree(ROOT / "data/raw/release_1_2_2_ci", "data/raw/release_1_2_2_ci")) + (list(tree(ROOT / "data/raw/release_1_2_2_cuda", "data/raw/release_1_2_2_cuda")) if (ROOT / "data/raw/release_1_2_2_cuda").is_dir() else []) + [(ROOT / "data/README.md", "data/README.md"), (ROOT / "data/raw/archives/becgpp_gpu_20261017T141120Z_cwk2teki.zip", "data/raw/archives/becgpp_gpu_20261017T141120Z_cwk2teki.zip")])
     payload = [(ROOT / "README.md", "README.md"), (source, "code/Software_source.zip"), (latex_source, "latex/LaTeX_source.zip"),
                (latex / "main.pdf", "latex/main.pdf"), (evidence, "data/Verification.zip"), (raw, "data/Reproducibility_data.zip"),
                (ROOT / "data/review/GPU_ASSESSMENT.md", "data/GPU_ASSESSMENT.md")]
     payload += list(tree(ROOT / "code/gpu", "code/gpu"))
-    payload += list(tree(ROOT / "code/releases", "code/releases"))
+    # Only the built distributions of the release itself (not earlier candidates).
+    payload += [(p, arc) for p, arc in tree(ROOT / "code/releases", "code/releases")
+                if re.search(r"becgpp-1\.2\.2(?![0-9a-z])", p.name)]
     payload += list(tree(latex / "submission", "latex/submission"))
     payload += list(tree(ROOT / "code/tools", "code/tools", {"__pycache__"}))
     final = make_zip("CPC_submission_package.zip", payload)

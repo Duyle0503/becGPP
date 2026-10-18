@@ -5,7 +5,20 @@ and `latex/`. The repository contains the tools and a compact review record;
 the manuscript, raw physics checkpoints and submission ZIPs are supplied
 separately. Installing becGPP does not require this bundle.
 
-## GPU notebooks
+## Release 1.2.2
+
+`gpu/GPU_RELEASE_RETEST.ipynb` (or the identical `.py`) runs the complete test
+suite of release `v1.2.2` (109 tests) on CUDA in one Kaggle/Colab cell. It
+downloads the tagged source and refuses to run if its file hashes differ from
+those pinned in the cell. Return the result ZIP; extracted, it belongs in
+`data/raw/release_1_2_2_cuda/` of the bundle, where `verify_final_project.py`
+picks it up (until then the release CUDA check is reported as pending).
+
+`finalize_release.ps1` brings a Windows bundle to the release in one command:
+checks out the tag, runs the CPU tests and the reference test run, compiles the
+manuscript, verifies the bundle and rebuilds the submission archives.
+
+## GPU notebooks (release candidate evidence)
 
 `gpu/GPU_CHECK_ONE_CELL.ipynb` (or the identical `.py`) runs the full 71-job
 verification plan in one Kaggle/Colab cell after enabling CUDA.
@@ -30,6 +43,8 @@ or the repository's `docs/CUDA_REVIEW_2026_10_17.md`.
 | `verify_final_project.py` | Check the organized bundle's code, data, CPU/CUDA evidence, notebooks and LaTeX references |
 | `prepare_final_submission.py` | Package code, LaTeX, evidence and data; read back every ZIP and verify its contents |
 | `workspace_paths.py` | Find the separate bundle or use the explicitly configured bundle root |
+| `pinned_source.py` | Confirm hashes pinned by earlier evidence runs against the working tree or the pinned git commit |
+| `finalize_release.ps1` | Windows: check out the release tag, test, compile, verify and package in one command |
 
 When the checkout is at `<bundle>/code/becGPP`, the bundle is found automatically.
 From another clone, set `BECGPP_CPC_ROOT` to the directory containing

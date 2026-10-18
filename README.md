@@ -176,7 +176,7 @@ examples/          ready-made YAML configs, run.py, Kaggle quick-start
 tests/             pytest: validation gate, kernel virials/limits, smoke, audit
 benchmarks/        scripts that regenerate the paper's tables and figures
   results/         their raw outputs, one folder per script
-data/sample_output/  sample I/O (format reference; produced with version 1.0)
+data/sample_output/  CPU reference test run of this version and its expected results
 docs/              change notes and review records
 tools/cpc/         one-cell GPU runners and packaging helpers for the CPC bundle
 CHANGELOG.md       changes in each release
@@ -187,7 +187,8 @@ pyproject.toml     package metadata and dependencies
 ## Reproducibility / tests
 
 ```bash
-pytest -q          # validation gate, kernel virials/limits, smoke and audit tests
+pytest -q                                   # validation gate, kernel virials/limits, smoke and audit tests
+python examples/cpu_test_run.py --check     # reference test run (CPU, about a minute) against data/sample_output
 ```
 
 The `validate` gate checks all three free-space kernels against analytic

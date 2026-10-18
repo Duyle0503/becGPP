@@ -8,6 +8,7 @@ import json
 import xml.etree.ElementTree as ET
 import zipfile
 from workspace_paths import find_workspace
+from pinned_source import verify_pinned
 
 ROOT = find_workspace()
 COMMIT = "75f0a304acf2ff61dceb3c5ac4df10a9ef84b197"
@@ -49,9 +50,8 @@ def review(raw, archive, output):
     assert source["commit"] == COMMIT
     expected = source["normalized_module_sha256"]
     assert len(expected) == 25
-    for name, value in expected.items():
-        content = (ROOT / "code/becGPP" / name).read_bytes().replace(b"\r\n", b"\n")
-        assert hashlib.sha256(content).hexdigest() == value, name
+    # The release may have changed some files since; confirm against the pinned commit.
+    pinned = verify_pinned(ROOT / "code/becGPP", COMMIT, expected)
     script = ast.parse((ROOT / "code/gpu/GPU_RETEST_ONLY.py").read_text(encoding="utf-8"))
     worker_node = next(n for n in script.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and t.id == "WORKER" for t in n.targets))
     worker = ast.literal_eval(worker_node.value)
@@ -86,7 +86,7 @@ def review(raw, archive, output):
     assert "97 passed in 29.52s" in (raw / "jobs/02_cuda_regressions/stdout.log").read_text()
     report = dict(review_date="2026-10-18", run_created_utc=environment["created_utc"],
                   commit=COMMIT, archive_sha256=sha(archive), archive_crc_valid=True,
-                  raw_files_verified=len(manifest), source_and_test_hashes_verified=len(expected),
+                  raw_files_verified=len(manifest), source_and_test_hashes_verified=len(expected), source_hash_confirmation=pinned,
                   embedded_worker_matches=True, cuda_tests_passed=97, failures=0, errors=0, skipped=0,
                   excluded_cases=0, same_97_test_ids_as_cpu=True, former_16_failed_cases_now_pass=True,
                   former_7_excluded_cases_now_pass=True, pytest_seconds=float(stats["time"]),
