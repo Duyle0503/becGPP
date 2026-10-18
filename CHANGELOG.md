@@ -1,11 +1,19 @@
 # 1.2.2 (2026-10-18)
 
 Release described in the Computer Physics Communications article. The discrete
-energy functional, kernels, solver and diagnostics are those of 1.2.2rc1.
+energy functional, kernels and diagnostics are those of 1.2.2rc1; the solver
+differs only in the recentring of translation-invariant states (below).
 
 - `default_cfg` warns (`RuntimeWarning`) when rotation leaves the energy
   unbounded below: `Omega != 0` with `s < 2`, or `s = 2` with
   `Omega**2 > 2*trap_coeff` (`tests/test_regime_warning.py`).
+- Translation-invariant problems (no trap, no rotation, no long-range term):
+  the converged state is shifted by whole grid cells so that its periodic
+  centre of mass sits at the box centre (`recentred_shift` in the output).
+  This is an exact symmetry of the discrete energy; it removes drift along the
+  translation mode that could carry a free droplet across the periodic
+  boundary and spoil radii and figures (`tests/test_recentre.py`). Found by
+  the CPU reference run. Trapped and long-range runs are unaffected.
 - `examples/cpu_test_run.py`: a reference test run on a CPU (a few minutes) that
   exercises the validation gate and seven small configurations covering every
   kernel, 2D/3D/quasi-2D, rotation and the cubic-quintic terms; `--check`

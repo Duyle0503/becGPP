@@ -46,6 +46,40 @@ def _preconditioner(grad, psi, G, cfg, phi=None):
     return _proj_tangent(z, psi, dV(G)), sigma
 
 
+def _translation_invariant(G, cfg):
+    """True when the discrete energy is invariant under periodic shifts of the
+    grid: no trap, no rotation and no (zero-padded, hence non-periodic)
+    long-range term."""
+    no_trap = float(G["s"]) == 0.0 or float(G.get("trap_coeff", 0.5)) == 0.0
+    no_lr = G["kernel"] == "none" or abs(float(cfg["G_C"])) <= 1e-15
+    return no_trap and no_lr and float(cfg.get("Omega", 0.0)) == 0.0
+
+
+def recentre_periodic(psi, G):
+    """Shift psi by whole grid cells so that its periodic (circular) centre of
+    mass sits at the box centre. For a translation-invariant problem this is an
+    exact symmetry of the discrete energy; it only undoes drift along the
+    translation mode, which otherwise can carry a free droplet across the
+    periodic boundary and spoil radii and figures. Returns (psi, shifts)."""
+    rho = psi.abs() ** 2
+    shifts = []
+    for ax in range(psi.dim()):
+        other = tuple(d for d in range(psi.dim()) if d != ax)
+        m = rho.sum(dim=other)
+        n = m.numel()
+        th = 2.0 * math.pi * torch.arange(n, device=m.device, dtype=m.dtype) / n
+        c = (m * torch.cos(th)).sum().item()
+        s = (m * torch.sin(th)).sum().item()
+        if c * c + s * s <= 1e-24 * m.sum().item() ** 2:   # no preferred position
+            shifts.append(0)
+            continue
+        j_com = (math.atan2(s, c) % (2.0 * math.pi)) * n / (2.0 * math.pi)
+        shifts.append(int(round(n // 2 - j_com)) % n)
+    if any(shifts):
+        psi = torch.roll(psi, shifts=tuple(shifts), dims=tuple(range(psi.dim())))
+    return psi, tuple(shifts)
+
+
 def ground_state(cfg, G=None, psi0=None, verbose=True):
     """Riemannian preconditioned conjugate-gradient minimization of the rotating
     GP energy on the unit-norm sphere: adaptive Sobolev preconditioner,
@@ -248,12 +282,16 @@ def ground_state(cfg, G=None, psi0=None, verbose=True):
     # oscillated; its energy is reported as computed, not assumed minimal.
     if best_resid < resid_rel:
         psi = best_psi
+    recentred = (0,) * psi.dim()
+    if _translation_invariant(G, cfg):              # undo drift along the zero mode
+        psi, recentred = recentre_periodic(psi, G)
     resid_abs, mu_f, resid_rel = compute_residual(psi, G, cfg)
     converged = bool(converged or (resid_rel < res_tol))
     obs = observables(psi, G, cfg)
     obs.update(iters=n_iter, walltime=time.time() - t0, resid_abs=resid_abs,
                resid_rel=resid_rel, min_resid=best_resid, converged=converged,
-               stop_reason=stop, preconditioner_shift=sigma,line_search_restarts=ls_restarts)
+               stop_reason=stop, preconditioner_shift=sigma,line_search_restarts=ls_restarts,
+               recentred_shift=list(recentred))
     if record:
         obs["trace"] = trace
     return psi.detach(), G, obs
