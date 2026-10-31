@@ -2,8 +2,8 @@
 
 **Kết luận: bài đã được sửa sâu và có bộ hồ sơ kiểm tra cụ thể, nhưng tôi chưa
 khuyên bấm nộp ngay.** Điểm còn yếu quan trọng là thiếu CUDA đúng release 1.2.2,
-chưa có refinement đủ cho đúng ca 3D có bẫy, và chưa có đồng thuận hai tác giả
-trên PDF cuối. Không thể bảo đảm được nhận hoặc “không thể bắt bẻ”.
+chưa có refinement đủ cho đúng ca 3D có bẫy. Cả hai tác giả đã được người dùng
+xác nhận duyệt bản PDF cuối ngày 31/10. Không thể bảo đảm được nhận hoặc “không thể bắt bẻ”.
 
 ## Đã thay đổi
 
@@ -30,7 +30,7 @@ trên PDF cuối. Không thể bảo đảm được nhận hoặc “không th�
   đọc và xác minh mọi mệnh đề trong mọi bài tham khảo.
 - Thêm funding không nhận specific grant theo xác nhận của tác giả; bỏ tuyên
   bố đã lưu CPC Program Library. Thư gửi biên tập không tự xác nhận đồng thuận
-  hay tính nguyên gốc chưa được hai tác giả chốt.
+  hay tính nguyên gốc trước khi tác giả xác nhận; xác nhận đầy đủ đã nhận ngày 31/10.
 
 ## Bằng chứng tính toán
 
@@ -64,7 +64,7 @@ CUDA release khi có dữ liệu đòi đủ 109 ID duy nhất khớp CPU, khôn
 skip, backend CUDA, worker và 27 hash nguồn/test phù hợp. Snapshot lịch sử lấy
 từ Git cho phép kiểm tra portable; hash gốc được giữ, không giả chứng thư có ký.
 
-Bài chính đã gộp supplementary; PDF dự kiến 38 trang ở bản sửa này. Kiểm tra
+Bài chính đã gộp supplementary; PDF có 38 trang, hash bắt đầu 405bfae81f81. Kiểm tra
 biên dịch, render và khôi phục gói có log riêng trong `final_revision_2026_10_29`.
 Các ZIP được đọc lại để kiểm CRC/hash, không đưa môi trường/cache vào bộ nộp.
 `SHA256.json` trong thư mục submission là chỉ mục hash của các gói hoàn chỉnh.
@@ -91,8 +91,8 @@ không tuyên bố đã xác nhận 100% yêu cầu biểu mẫu hiện hành c�
    regression release. Trả nguyên ZIP và checksum.
 2. Chạy GPU_TRAPPED3D_REFINEMENT để củng cố ca trapped 3D; giữ cả trạng thái OOM,
    timeout hoặc tiêu chí chưa đạt. Nếu chưa làm, tiếp tục giữ giới hạn trong bài.
-3. Hai tác giả duyệt đúng PDF cuối và xác nhận nguyên gốc, không nộp đồng thời,
-   competing interests, CRediT và khai báo AI đúng thực tế.
+3. Đã nhận xác nhận của người dùng cho cả hai tác giả trên đúng PDF cuối về
+   nội dung, nguyên gốc, không nộp đồng thời, competing interests, CRediT và AI.
 4. Hoàn tất lưu/cung cấp program files theo CPC Program Library và kiểm tra các
    mục bắt buộc trên cổng nộp. Chưa có DOI deposit để ghi vào bài.
 

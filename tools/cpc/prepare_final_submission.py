@@ -16,7 +16,7 @@ def tree(folder,prefix,exclusions=EXCLUDED):
     for base,dirs,files in os.walk(folder):
         dirs[:]=sorted(d for d in dirs if d not in exclusions and not d.startswith('discarded_environment_trial'))
         for name in sorted(files):
-            if name.startswith('discarded_environment_trial') or name.endswith(('.pyc','.tmp')):continue
+            if name.startswith('discarded_environment_trial') or name.endswith(('.pyc','.tmp')) or name in {'packaging.log','packaging_final.log'}:continue
             p=Path(base)/name
             yield p,(Path(prefix)/p.relative_to(folder)).as_posix()
 def check_zip(path,compare_files=False):
