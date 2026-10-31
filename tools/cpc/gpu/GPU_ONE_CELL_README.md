@@ -1,14 +1,16 @@
 # Kiểm tra GPU trong một cell
 
-## Ưu tiên cho bản sửa cuối (31/10/2026)
+## Cell xác nhận trapped 3D hiện hành: protocol v2 (31/10/2026)
 
-`GPU_RELEASE_RETEST.ipynb` chạy đủ **109 test của release 1.2.2** và là lượt
-regression hiện còn thiếu. Không cần chạy lại 71 công việc để bổ sung lượt này.
-`GPU_TRAPPED3D_REFINEMENT.ipynb` là cell riêng gồm sáu công việc refinement cho
-đúng ca 3D có bẫy: N=96/128/160/192, L=8, pad=2; thêm pad=3 tại N=128 và hộp
-L=10,N=160 để giữ dx=0.125. Cả hai yêu cầu CUDA, kiểm tra hash nguồn và giữ các
-trạng thái thiếu bộ nhớ, timeout, lỗi hoặc chưa đạt. Protocol refinement chưa
-được thực thi; kiểm tra cú pháp không được coi là kiểm chứng CUDA.
+GPU_TRAPPED3D_REFINEMENT.ipynb hiện chạy **11 lượt tính vật lý và 109 test CUDA**
+trong cùng một cell. Nó thay bản sáu job chưa chạy trước đó: thêm quét hộp,
+padding ở hai mức lưới, seed độc lập và lượt siết residual; có checkpoint/resume.
+Xem TRAPPED3D_REFINEMENT_README.md và TRAPPED3D_REFINEMENT_PLAN.json để biết
+đúng ngưỡng và cách lưu/tiếp tục. Mã số học vẫn khóa tại release 1.2.2.
+
+GPU_RELEASE_RETEST.ipynb vẫn là lựa chọn riêng chỉ chạy 109 test. Nếu dùng
+cell v2 mặc định, không cần chạy thêm cell regression này hoặc batch 71 job.
+Các test harness tại máy đã đạt; protocol v2 chưa có dữ liệu GPU thực.
 
 Các phần dưới mô tả **kế hoạch lịch sử rc1**. 97 test rc1 đã đạt trên T4;
 không thay con số này bằng 109 hoặc suy ra release đã được kiểm tra CUDA.
