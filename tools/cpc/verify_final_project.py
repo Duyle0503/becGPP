@@ -131,7 +131,7 @@ def main():
     reference = read(repo / "data/sample_output/cpu_test_run/expected_results.json")
     assert reference["code_version"] == "becGPP_" + RELEASE and reference["validation"]["passed"]
     checks["cpu_reference_run_cases"] = len(reference["cases"])
-    for stem, pin in (("GPU_CHECK_ONE_CELL", HEAD), ("GPU_RETEST_ONLY", HEAD), ("GPU_RELEASE_RETEST", RELEASE_TAG)):
+    for stem, pin in (("GPU_CHECK_ONE_CELL", HEAD), ("GPU_RETEST_ONLY", HEAD), ("GPU_RELEASE_RETEST", RELEASE_TAG), ("GPU_TRAPPED3D_REFINEMENT", RELEASE_COMMIT)):
         script = (ROOT / "code/gpu" / (stem + ".py")).read_text(encoding="utf-8")
         syntax = ast.parse(script)
         hashes = next(n for n in syntax.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and "HASH" in t.id for t in n.targets))
@@ -149,7 +149,7 @@ def main():
         cells = [c for c in nb["cells"] if c["cell_type"] == "code"]
         assert len(cells) == 1
         assert "".join(cells[0]["source"]) == script
-    checks["one_cell_gpu_notebooks"] = 3
+    checks["one_cell_gpu_notebooks"] = 4
     text = tex_sources()
     labels = re.findall(r"\\label\{([^}]+)\}", text)
     assert len(labels) == len(set(labels)), "Duplicate LaTeX labels"
