@@ -18,9 +18,12 @@ benchmark protocols and documentation only.
 ## Runners
 
 `gpu/GPU_RELEASE_RETEST.ipynb` runs the 109 release tests in one CUDA cell.
-`gpu/GPU_TRAPPED3D_REFINEMENT.ipynb` supplies six grid/box/padding jobs for the
-trapped 3D showcase. The latter protocol has not been executed; syntax review
-is not GPU validation. Both pin source content and forbid CPU substitution.
+`gpu/GPU_TRAPPED3D_REFINEMENT.ipynb` now supplies protocol v2: eleven physics
+solves (grid/box/padding/seed/tighter residual) and the 109 CUDA tests by default.
+It includes checkpoint/resume, per-job hashes and a standalone offline reader.
+Read `gpu/TRAPPED3D_REFINEMENT_README.md`. It passed 32 local harness checks,
+including a small CPU checkpoint roundtrip; actual GPU evidence is pending.
+Both runners pin source content and forbid substituting CPU evidence.
 
 `benchmarks/cpc_ablation.py` is CPU-only. Its script used for the recorded run
 is preserved with the evidence as runner_executed.py; the shipped version
