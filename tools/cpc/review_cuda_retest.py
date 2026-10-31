@@ -24,14 +24,55 @@ def sha(path):
 def read(path):
     return json.loads(path.read_text(encoding="utf-8-sig"))
 
-def test_ids(path):
+def test_ids(path, expected=97):
     root = ET.parse(path).getroot()
     cases = root.findall(".//testcase")
-    assert len(cases) == 97
+    assert len(cases) == expected
     assert not root.findall(".//failure") and not root.findall(".//error") and not root.findall(".//skipped")
     ids = [(t.get("classname"), t.get("name")) for t in cases]
     assert len(set(ids)) == len(ids), "Duplicate test identifiers"
+    suites = [root] if root.tag == 'testsuite' else root.findall('.//testsuite')
+    assert sum(int(s.get('tests',0)) for s in suites) == expected
+    assert all(int(s.get(k,0)) == 0 for s in suites for k in ('failures','errors','skipped'))
     return ids
+
+
+def review_release(raw):
+    """Audit a complete release run; a PASS label alone is never sufficient."""
+    manifest = read(raw / 'SHA256.json')
+    assert manifest and 'source_manifest.json' in manifest and 'worker.py' in manifest
+    for name, value in manifest.items():
+        assert not Path(name).is_absolute() and '..' not in Path(name).parts and ':' not in name
+        assert sha(raw / name) == value, name
+    script = ast.parse((ROOT/'code/gpu/GPU_RELEASE_RETEST.py').read_text(encoding='utf-8'))
+    assignments = {t.id: ast.literal_eval(n.value) for n in script.body if isinstance(n,ast.Assign)
+                   for t in n.targets if isinstance(t,ast.Name) and t.id in ('EXPECTED_MODULE_HASHES','WORKER','SOLVER_COMMIT')}
+    source=read(raw/'source_manifest.json')
+    assert source['commit'] == assignments['SOLVER_COMMIT'] == 'v1.2.2'
+    assert source['normalized_module_sha256'] == assignments['EXPECTED_MODULE_HASHES']
+    assert len(source['normalized_module_sha256']) == 27
+    assert (raw/'worker.py').read_text().replace('\r\n','\n') == assignments['WORKER'].replace('\r\n','\n')
+    result=read(raw/'jobs/02_cuda_regressions/result.json')
+    summary=read(raw/'SUMMARY.json');environment=read(raw/'environment.json')
+    assert read(raw/'outcomes.json') == [result]
+    assert read(raw/'plan.json')['jobs'] == [result['job']]
+    assert summary['overall']=='PASS' and summary['status_counts']=={'PASS':1}
+    assert summary['planned_jobs']==summary['completed_jobs']==1
+    assert summary['environment']==environment and summary['gpu_executed'] is True
+    assert environment['solver_commit']=='v1.2.2' and environment['gpu_evidence'] is True
+    assert environment['regressions_only'] is True
+    assert result['status']=='PASS' and result['backend']==result['job']['backend']=='cuda'
+    assert result['package_version']=='1.2.2'
+    assert result['expected_tests']==109 and result['excluded_gpu_reference_cases']==0
+    assert int(result['stats']['tests'])==109
+    assert all(int(result['stats'][k])==0 for k in ('failures','errors','skipped'))
+    ids=test_ids(raw/'jobs/02_cuda_regressions/pytest.xml',109)
+    cpu=test_ids(ROOT/'data/raw/release_1_2_2_ci/pytest_cpu.xml',109)
+    assert collections.Counter(ids)==collections.Counter(cpu)
+    assert result['cuda']['name']==environment['gpu_name']
+    assert result['cuda']['runtime']==environment['cuda_runtime']
+    assert result['cuda']['peak_allocated_bytes']>0
+    return dict(tests=109,failures=0,errors=0,skipped=0,source_hashes=27,same_ids_as_release_cpu=True)
 
 def review(raw, archive, output):
     manifest = read(raw / "SHA256.json")

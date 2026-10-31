@@ -1,5 +1,18 @@
 # Kiểm tra GPU trong một cell
 
+## Ưu tiên cho bản sửa cuối (31/10/2026)
+
+`GPU_RELEASE_RETEST.ipynb` chạy đủ **109 test của release 1.2.2** và là lượt
+regression hiện còn thiếu. Không cần chạy lại 71 công việc để bổ sung lượt này.
+`GPU_TRAPPED3D_REFINEMENT.ipynb` là cell riêng gồm sáu công việc refinement cho
+đúng ca 3D có bẫy: N=96/128/160/192, L=8, pad=2; thêm pad=3 tại N=128 và hộp
+L=10,N=160 để giữ dx=0.125. Cả hai yêu cầu CUDA, kiểm tra hash nguồn và giữ các
+trạng thái thiếu bộ nhớ, timeout, lỗi hoặc chưa đạt. Protocol refinement chưa
+được thực thi; kiểm tra cú pháp không được coi là kiểm chứng CUDA.
+
+Các phần dưới mô tả **kế hoạch lịch sử rc1**. 97 test rc1 đã đạt trên T4;
+không thay con số này bằng 109 hoặc suy ra release đã được kiểm tra CUDA.
+
 Mở `GPU_CHECK_ONE_CELL.ipynb` trong Kaggle hoặc Colab, bật GPU rồi chạy cell duy nhất. Hoặc chép toàn bộ `GPU_CHECK_ONE_CELL.py` vào một cell Python. Cell tự tải đúng mã, bổ sung thư viện kiểm tra còn thiếu, chạy từng công việc và tạo ZIP kết quả. Không cần cell cài đặt riêng và không thay PyTorch CUDA đang có.
 
 Mã và bộ test sau sửa được khóa tại commit `75f0a304acf2ff61dceb3c5ac4df10a9ef84b197`, phiên bản 1.2.2rc1. Các module tính toán giống hệt commit `5f66bfc8635a1791078fdd503160e341fb12e82c` đã được đo trên Tesla T4; chỉ test fixture và tài liệu được sửa. Cell kiểm tra SHA256 chuẩn hóa xuống dòng của các module và test trước khi chạy. Nếu notebook đã import một bản becGPP khác, các worker vẫn chạy trong tiến trình mới với đường dẫn nguồn đã khóa.

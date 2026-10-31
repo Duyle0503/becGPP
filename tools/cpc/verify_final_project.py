@@ -15,7 +15,7 @@ import json
 import re
 import subprocess
 import xml.etree.ElementTree as ET
-from review_cuda_retest import review as audit_cuda_retest
+from review_cuda_retest import review as audit_cuda_retest, review_release, test_ids
 from workspace_paths import find_workspace
 from pinned_source import verify_pinned
 
@@ -25,6 +25,7 @@ BATCH = "5f66bfc8635a1791078fdd503160e341fb12e82c"  # 71-job GPU batch
 RELEASE = "1.2.2"
 RELEASE_TAG = "v" + RELEASE
 RELEASE_TESTS = 109
+RELEASE_COMMIT = '1c7eef613d147b6857375f9a61342b38cae1bc86'
 # Files changed between the GPU batch and the release (see CHANGELOG 1.2.2).
 CHANGED_SINCE_BATCH = {
     "becgpp/__init__.py": "version string",
@@ -97,10 +98,10 @@ def main():
     if (repo / ".git").exists():
         head = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=repo, text=True).strip()
         tagged = subprocess.check_output(["git", "rev-parse", RELEASE_TAG + "^{commit}"], cwd=repo, text=True).strip()
-        assert head == tagged, f"checkout {head[:12]} is not the release tag {RELEASE_TAG} ({tagged[:12]})"
+        assert tagged == RELEASE_COMMIT, 'Release tag changed'
         for ancestor in (BATCH, HEAD):
-            subprocess.run(["git", "merge-base", "--is-ancestor", ancestor, "HEAD"], cwd=repo, check=True)
-        assert not subprocess.check_output(["git", "status", "--porcelain"], cwd=repo, text=True).strip()
+            subprocess.run(["git", "merge-base", "--is-ancestor", ancestor, RELEASE_COMMIT], cwd=repo, check=True)
+        subprocess.run(['git','merge-base','--is-ancestor',RELEASE_COMMIT,head],cwd=repo,check=True)
         checks["git_head"] = head
         checks["release_tag"] = RELEASE_TAG
         checks["verified_solver_test_commit"] = HEAD
@@ -115,14 +116,17 @@ def main():
     release_dir = ROOT / "data/raw/release_1_2_2_ci"
     ci = read(release_dir / "github_checks.json")
     release_sha = ci["headRevision"]
-    if checks["git_head"] != "source distribution; numerical hashes checked":
-        assert release_sha == checks["git_head"]
+    assert release_sha == RELEASE_COMMIT
+    release_manifest=read(release_dir/'SHA256.json')
+    for name,value in release_manifest.items():
+        assert not Path(name).is_absolute() and '..' not in Path(name).parts
+        assert sha(release_dir/name)==value, name
+    checks['release_ci_raw_files_verified']=len(release_manifest)
     ci_jobs = [j for j in ci["jobs"] if j["workflow"] == "CI"]
     assert len(ci_jobs) == 3 and all(j["conclusion"] == "success" and j["head_sha"] == release_sha for j in ci_jobs)
     checks["github_ci_success_jobs"] = len(ci_jobs)
     suite = ET.parse(release_dir / "pytest_cpu.xml").getroot()
-    cases = suite.findall(".//testcase")
-    assert len(cases) == RELEASE_TESTS and all(not list(t) for t in cases)
+    cases = test_ids(release_dir / 'pytest_cpu.xml', RELEASE_TESTS)
     checks["release_cpu_tests_passed"] = len(cases)
     reference = read(repo / "data/sample_output/cpu_test_run/expected_results.json")
     assert reference["code_version"] == "becGPP_" + RELEASE and reference["validation"]["passed"]
@@ -133,6 +137,8 @@ def main():
         hashes = next(n for n in syntax.body if isinstance(n, ast.Assign) and any(isinstance(t, ast.Name) and "HASH" in t.id for t in n.targets))
         expected = ast.literal_eval(hashes.value)
         if pin == RELEASE_TAG:
+            actual_files={p.relative_to(repo).as_posix() for folder in ('becgpp','tests') for p in (repo/folder).glob('*.py')}
+            assert actual_files == set(expected), 'Release module/test file set differs'
             for name, value in expected.items():
                 content = (repo / name).read_bytes().replace(b"\r\n", b"\n")
                 assert hashlib.sha256(content).hexdigest() == value, name
@@ -171,15 +177,13 @@ def main():
     checks["cuda_test_ids_match_cpu"] = cuda["same_97_test_ids_as_cpu"]
     cuda_release = ROOT / "data/raw/release_1_2_2_cuda"
     if (cuda_release / "SUMMARY.json").is_file():
-        summary = read(cuda_release / "SUMMARY.json")
-        result = read(cuda_release / "jobs/02_cuda_regressions/result.json")
-        assert summary["overall"] == "PASS" and summary["gpu_executed"] is True
-        assert result["status"] == "PASS" and int(result["stats"]["tests"]) == RELEASE_TESTS
-        assert read(cuda_release / "source_manifest.json")["commit"] == RELEASE_TAG
+        checks['release_cuda_audit'] = review_release(cuda_release)
         checks["release_cuda_tests_passed"] = RELEASE_TESTS
     else:
         checks["release_cuda_tests_passed"] = "pending: run code/gpu/GPU_RELEASE_RETEST.ipynb on a CUDA GPU"
     checks["integrity_status"] = "PASS"
+    checks['evidence_status'] = 'release CUDA pending' if not isinstance(checks['release_cuda_tests_passed'],int) else 'release CPU and CUDA available'
+    checks['submission_readiness'] = 'author approval and archival procedure must be checked separately; no acceptance guarantee'
     out = review / "FINAL_PROJECT_CHECK.json"
     out.write_text(json.dumps(checks, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(checks, indent=2))
