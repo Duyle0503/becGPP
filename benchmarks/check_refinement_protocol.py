@@ -36,6 +36,16 @@ REVIEW = WORKSPACE / "data/review/refinement_runner_v2_2026_10_31"
 
 
 class ProtocolChecks(unittest.TestCase):
+    def test_summary_comparison_accepts_last_bit_reduction_difference(self):
+        from review_trapped3d_results import metrics_compatible
+        self.assertTrue(metrics_compatible({"density_l2": 2.625097576646383e-7}, {"density_l2": 2.625097576646382e-7}))
+
+    def test_summary_comparison_rejects_meaningful_change_or_verdict_change(self):
+        from review_trapped3d_results import metrics_compatible
+        self.assertFalse(metrics_compatible({"energy": -3.44}, {"energy": -3.45}))
+        self.assertFalse(metrics_compatible({"pass": True}, {"pass": 1}))
+        self.assertFalse(metrics_compatible({"pass": True}, {"pass": False}))
+
     def setUp(self):
         REVIEW.mkdir(parents=True, exist_ok=True)
         self.tmp = tempfile.TemporaryDirectory(prefix="protocol_test_", dir=REVIEW)

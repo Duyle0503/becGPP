@@ -1,5 +1,11 @@
 # becGPP
 
+> Verification update, 1 November 2026: release 1.2.2 now has **109/109 CUDA tests**
+> and **11/11 trapped-3D physical refinement/control solves** passing on one T4.
+> [Detailed review](docs/CPC_FINAL_REVIEW_2026_11_01.md) records source hashes,
+> independent checks and finite-grid limits. The numerical release is unchanged.
+
+
 Version **1.2.2**, the version described in the accompanying *Computer Physics
 Communications* article. Install it from this directory (see [Install](#install)).
 

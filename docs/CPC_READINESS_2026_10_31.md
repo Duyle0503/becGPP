@@ -1,3 +1,5 @@
+> Historical assessment. See [1 November update](CPC_FINAL_REVIEW_2026_11_01.md) for the completed release CUDA/refinement evidence.
+
 # Đánh giá bản sửa cuối CPC/CPiP — 31/10/2026
 
 **Kết luận: bài đã được sửa sâu và có bộ hồ sơ kiểm tra cụ thể, nhưng tôi chưa

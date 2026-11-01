@@ -5,7 +5,7 @@ from pathlib import Path
 import argparse, hashlib, json, os, re, shutil, subprocess, zipfile
 from workspace_paths import find_workspace
 ROOT=find_workspace(); OUT=ROOT/'data/submission'
-EXCLUDED={'.git','.lake','__pycache__','.pytest_cache','build','dist','becgpp.egg-info','becgpp_out','latex_source_check','pdf_pages','pdf_qa'}
+EXCLUDED={'.git','.lake','__pycache__','.pytest_cache','build','dist','becgpp.egg-info','becgpp_out','latex_source_check','pdf_pages','pdf_qa','scratch'}
 def stream_sha(stream):
     h=hashlib.sha256()
     for block in iter(lambda:stream.read(1024*1024),b''):h.update(block)
@@ -16,7 +16,7 @@ def tree(folder,prefix,exclusions=EXCLUDED):
     for base,dirs,files in os.walk(folder):
         dirs[:]=sorted(d for d in dirs if d not in exclusions and not d.startswith('discarded_environment_trial'))
         for name in sorted(files):
-            if name.startswith('discarded_environment_trial') or name.endswith(('.pyc','.tmp')) or name in {'packaging.log','packaging_final.log'}:continue
+            if name.startswith(('discarded_environment_trial','protocol_test_')) or name.endswith(('.pyc','.tmp')) or name in {'packaging.log','packaging_final.log','bundle_integrity.log','packaging_release.log'}:continue
             p=Path(base)/name
             yield p,(Path(prefix)/p.relative_to(folder)).as_posix()
 def check_zip(path,compare_files=False):
@@ -30,8 +30,9 @@ def check_zip(path,compare_files=False):
             with z.open(arc) as f:assert stream_sha(f)==value,arc
             if compare_files and arc!='data/README.md':assert sha(ROOT/arc)==value,arc
     return records
-def make_zip(name,members):
-    target=OUT/name;temp=target.with_suffix('.partial.zip');members=list(members)
+def make_zip(name,members,folder=None):
+    folder=Path(folder) if folder else OUT;folder.mkdir(parents=True,exist_ok=True)
+    target=folder/name;temp=target.with_suffix('.partial.zip');members=list(members)
     assert len({a for _,a in members})==len(members);records={}
     with zipfile.ZipFile(temp,'w',compression=zipfile.ZIP_DEFLATED,compresslevel=6,allowZip64=True) as z:
         for p,arc in members:
@@ -63,7 +64,9 @@ def source_members():
         assert all(sha(repo/n)==v for n,v in data['files'].items())
     return [(repo/n,'code/becGPP/'+n) for n in names]+[(manifest,'code/SOURCE_MANIFEST.json')]
 def main():
-    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--rebuild-reproducibility',action='store_true');args=p.parse_args()
+    p=argparse.ArgumentParser(description=__doc__);p.add_argument('--rebuild-reproducibility',action='store_true')
+    p.add_argument('--master-dir',default=str(OUT/'complete'),help='Directory for the large master archive; can be a storage junction')
+    args=p.parse_args()
     OUT.mkdir(parents=True,exist_ok=True)
     assert json.loads((ROOT/'data/review/FINAL_PROJECT_CHECK.json').read_text())['integrity_status']=='PASS'
     source=make_zip('Software_source.zip',source_members());latex=ROOT/'latex'
@@ -89,8 +92,12 @@ def main():
         raw=make_zip('Reproducibility_data.zip',rm)
     payload=[(ROOT/'README.md','README.md'),(source,'code/Software_source.zip'),(latex_source,'latex/LaTeX_source.zip'),
              (latex/'main.pdf','latex/main.pdf'),(evidence,'data/Verification.zip'),(raw,'data/Reproducibility_data.zip')]
+    release_archive=ROOT/'data/raw/archives/becgpp_trapped3d_v2_5d8306c9b9eb.zip'
+    if release_archive.is_file():payload.append((release_archive,'data/raw/archives/'+release_archive.name))
+    payload.append((ROOT/'code/tools/RESTORE.py','RESTORE.py'))
     payload+=list(tree(ROOT/'code/gpu','code/gpu'))+list(tree(latex/'submission','latex/submission'))+list(tree(ROOT/'code/tools','code/tools'))
     payload += [(f,a) for f,a in tree(ROOT/'code/releases','code/releases') if re.search(r'becgpp-1\.2\.2(?![0-9a-z])',f.name)]
-    final=make_zip('CPC_submission_package.zip',payload)
-    (OUT/'SHA256.json').write_text(json.dumps({f.name:dict(bytes=f.stat().st_size,sha256=sha(f)) for f in [source,latex_source,evidence,raw,final]},indent=2)+'\n')
+    final=make_zip('CPC_submission_package.zip',payload,args.master_dir)
+    products=[source,latex_source,evidence,raw,final]+([release_archive] if release_archive.is_file() else [])
+    (OUT/'SHA256.json').write_text(json.dumps({f.name:dict(bytes=f.stat().st_size,sha256=sha(f),relative_path=os.path.relpath(f,OUT).replace('\\','/')) for f in products},indent=2)+'\n')
 if __name__=='__main__':main()

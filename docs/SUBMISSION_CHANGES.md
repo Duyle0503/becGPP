@@ -1,11 +1,14 @@
-# Submission candidate and provenance
+# Submission release and provenance
 
-Version: 1.2.2rc1. Base commit: 82150d636fef994339e2d6c0791469eb14338ece.
-The candidate has not been published as a tag. The supplied source archive and
-SHA256 manifest identify the submitted files. Historical output under benchmarks/results
-is preserved, not relabelled as new output. The surrounding submission package
-contains the new validation logs and independent NumPy/SciPy comparisons.
+Current numerical release: v1.2.2, commit
+1c7eef613d147b6857375f9a61342b38cae1bc86. Later commits add benchmark protocols,
+offline verification and documentation; they do not change the 19 numerical
+modules or eight release test files. The source ZIP manifest records its own
+packaging commit. Historical output is retained under its producing version.
 
-See CHANGELOG.md for implementation changes and the submission's verification
-report for tests, limits, and any remaining author actions. CPU checks do not
-certify CUDA throughput or replace the historical high-resolution GPU runs.
+The supplied 31 October source-pinned dataset passes 109 CUDA tests and eleven
+trapped-3D physical solves/controls. See CPC_FINAL_REVIEW_2026_11_01.md for
+independent checks, finite-grid limits and author/deposition actions. Compact
+original summaries are in evidence/trapped3d_release_2026_10_31; the separate
+CPC code/data/latex bundle contains the original 577 MB ZIP and saved states.
+No Program Library deposition or journal submission is asserted by this file.

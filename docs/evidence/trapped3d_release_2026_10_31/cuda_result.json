@@ -1,0 +1,40 @@
+{
+  "status": "PASS",
+  "exit_code": 0,
+  "junit": {
+    "passed": true,
+    "test_count": 109,
+    "test_ids_sha256": "4eaf237816978092747dd4d94e8a568969b105de1a80b2b77a578ba3a4d73822",
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "job": {
+    "name": "release_cuda_109",
+    "kind": "regression"
+  },
+  "job_signature": "2e1982a70a5617746b52823d3e7d563110ae6d23d9a18553a4c25f6b2161cfff",
+  "protocol_fingerprint": "5d8306c9b9eb7cba8bf6458c61aab5aab273191f56372d7176dbf6f1ef2d5b2a",
+  "scope": "CUDA_EVIDENCE",
+  "backend": "cuda",
+  "gpu_executed": true,
+  "package_version": "1.2.2",
+  "source_commit": "1c7eef613d147b6857375f9a61342b38cae1bc86",
+  "session": "20261031T150501Z_771896cc",
+  "input_state_sha256": null,
+  "environment": {
+    "python": "3.13.15 (main, Aug  6 2026, 11:06:22) [GCC 13.3.0]",
+    "numpy": "2.1.3",
+    "torch": "2.11.0+cu128",
+    "platform": "Linux-6.18.55+-x86_64-with-glibc2.39",
+    "cuda_runtime": "12.8",
+    "gpu": "Tesla T4",
+    "torch_threads": 2,
+    "deterministic_algorithms_warn_only": true
+  },
+  "attempt_seconds": 38.230262052,
+  "peak_allocated_bytes": 2857006592,
+  "peak_reserved_bytes": 4938792960,
+  "worker_exit_code": 0,
+  "junit_path": "jobs/release_cuda_109/attempt_001/pytest.xml"
+}

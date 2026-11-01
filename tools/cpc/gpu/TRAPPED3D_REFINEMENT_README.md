@@ -1,5 +1,12 @@
 # Một cell Kaggle để kiểm tra ca 3D có bẫy — protocol v2
 
+Cập nhật 01/11/2026: đã nhận và kiểm tra dữ liệu thật của protocol này.
+Đủ 11/11 lượt vật lý và 109/109 test CUDA đạt trên một Tesla T4. Năng lượng
+có bậc hội tụ 1.979/1.987; virial scaled mịn nhất 1.93e-4. Hai khoảng trống
+kỹ thuật của bản thảo đã khép, không cần chạy lại để tạo cùng bằng chứng.
+Dữ liệu canonical ở data/raw/trapped3d_release_2026_10_31 của bộ CPC; xem
+FINAL_READINESS_2026_11_01.md. Các hướng dẫn bên dưới phục vụ tái lập.
+
 Mở `GPU_TRAPPED3D_REFINEMENT.ipynb` trên Kaggle, bật GPU và Internet, rồi chạy
 **cell code duy nhất**. Hoặc chép toàn bộ script `.py` cùng tên vào một cell.
 Không cần cài becGPP bằng pip: worker tự nhập đúng nguồn được khóa bằng commit
@@ -122,3 +129,8 @@ Bộ đọc so hash, receipt, nguồn/code protocol đã biết, JUnit thực v�
 so sánh từ dữ liệu; không chỉ đọc nhãn PASS. Chỉ kết quả GPU thực sau khi chạy
 mới có thể dùng để cập nhật bài. Các bài test harness/CPU tại máy không thay
 cho kết quả này. `PASS` cũng không đồng nghĩa tạp chí đã chấp nhận bài.
+
+Dùng reader hiện hành đi kèm repo/bộ nộp. Reader cho phép sai khác reduction
+cuối bit giữa NumPy 2.1.3/2.4.6 khi tái tạo summary (relative 1e-12, absolute
+1e-24), nhưng giữ nguyên mọi ngưỡng khoa học và yêu cầu verdict/boolean trùng
+chính xác. Không sửa core/worker đã khóa trong cell thực thi.

@@ -9,6 +9,9 @@ Run from any directory: python code/tools/verify_final_project.py
 This is an artifact-integrity check, not a replacement for pytest or a CUDA run.
 """
 from pathlib import Path
+import contextlib
+import io
+import sys
 import ast
 import hashlib
 import json
@@ -176,7 +179,26 @@ def main():
     checks["cuda_regression_seconds"] = cuda["pytest_seconds"]
     checks["cuda_test_ids_match_cpu"] = cuda["same_97_test_ids_as_cpu"]
     cuda_release = ROOT / "data/raw/release_1_2_2_cuda"
-    if (cuda_release / "SUMMARY.json").is_file():
+    refinement = ROOT / 'data/raw/trapped3d_release_2026_10_31'
+    if (refinement / 'SUMMARY.json').is_file():
+        sys.path.insert(0,str(repo/'benchmarks'))
+        from review_trapped3d_results import review as review_trapped3d
+        with contextlib.redirect_stdout(io.StringIO()):
+            audited=review_trapped3d(refinement)
+        assert audited['artifact_integrity']=='PASS' and audited['overall']=='PASS'
+        assert audited['refinement_status']==audited['release_cuda_status']=='PASS'
+        archive=ROOT/'data/raw/archives/becgpp_trapped3d_v2_5d8306c9b9eb.zip'
+        assert sha(archive)=='ef61e8fe6d270ceac9b669a526dbfbaedeb7cf0f016e8d78680af6f99aad379a'
+        cuda_record=read(refinement/'jobs/release_cuda_109/result.json')
+        junit_root=ET.parse(refinement/cuda_record['junit_path']).getroot()
+        junit_seconds=sum(float(s.attrib['time']) for s in junit_root.iter('testsuite'))
+        checks.update(release_cuda_tests_passed=cuda_record['junit']['test_count'],trapped3d_refinement_status='PASS',
+                      trapped3d_physics_jobs=audited['completed_jobs']-1,
+                      release_cuda_junit_seconds=junit_seconds,refinement_archive_sha256=sha(archive),
+                      release_cuda_evidence='data/raw/trapped3d_release_2026_10_31',
+                      refinement_source_commit=RELEASE_COMMIT)
+        (review/'RELEASE_GPU_REFINEMENT_AUDIT.json').write_text(json.dumps(audited,indent=2)+'\n',encoding='utf-8')
+    elif (cuda_release / "SUMMARY.json").is_file():
         checks['release_cuda_audit'] = review_release(cuda_release)
         checks["release_cuda_tests_passed"] = RELEASE_TESTS
     else:

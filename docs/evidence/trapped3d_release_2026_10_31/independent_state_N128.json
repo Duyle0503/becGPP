@@ -1,0 +1,25 @@
+{
+  "N": 128,
+  "L": 8.0,
+  "mass": 1.0,
+  "Ekin": 0.7414813254392909,
+  "Etrap": 0.801804226576272,
+  "Econtact": 2.5488992893566644,
+  "full_newton": true,
+  "Egrav": -7.534333945321607,
+  "energy": -3.4421491039493795,
+  "mu_H": -8.427583759914318,
+  "mu_E": -8.427583759914322,
+  "residual": 6.456795280688448e-07,
+  "virial_relative": 0.00043222917275169713,
+  "phi_center": -20.530872885797358,
+  "seconds": 21.310358999995515,
+  "component_absolute_errors": {
+    "Ekin": 0.0,
+    "Etrap": 1.1102230246251565e-16,
+    "Econtact": 8.881784197001252e-16
+  },
+  "scaled_energy_error": 1.0321207976505921e-15,
+  "residual_absolute_error": 2.8888058666107913e-18,
+  "scope": "Independent NumPy/SciPy discrete-state evaluation; no becgpp imported, no optimization performed"
+}

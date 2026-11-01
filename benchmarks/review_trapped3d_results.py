@@ -4,9 +4,28 @@ python benchmarks/review_trapped3d_results.py RESULTS.zip --out extracted_result
 """
 import argparse
 import json
+import math
 from pathlib import Path
 from cpc_refinement_core import (assess, canonical, collect_results, definition, digest,
                                  read, restore_archive, atomic_json, sha)
+
+
+def metrics_compatible(recorded, recomputed):
+    """Allow last-bit reduction differences across NumPy/CPU implementations.
+
+    This tolerance applies only to reproduction of the stored summary. The
+    scientific acceptance thresholds are recomputed unchanged, and verdicts
+    and criterion booleans must still agree exactly.
+    """
+    if isinstance(recorded, dict) and isinstance(recomputed, dict):
+        return set(recorded) == set(recomputed) and all(metrics_compatible(recorded[k], recomputed[k]) for k in recorded)
+    if isinstance(recorded, list) and isinstance(recomputed, list):
+        return len(recorded) == len(recomputed) and all(metrics_compatible(a, b) for a, b in zip(recorded, recomputed))
+    if isinstance(recorded, bool) or isinstance(recomputed, bool):
+        return type(recorded) is type(recomputed) and recorded == recomputed
+    if isinstance(recorded, (int, float)) and isinstance(recomputed, (int, float)):
+        return math.isclose(recorded, recomputed, rel_tol=1e-12, abs_tol=1e-24)
+    return recorded == recomputed
 
 
 def review(path, output=None):
@@ -34,10 +53,12 @@ def review(path, output=None):
     outcomes = collect_results(root, expected)
     result = assess(root, expected, outcomes)
     recorded = read(root / "SUMMARY.json")
-    for key in ("metrics", "criteria_pass", "refinement_status", "release_cuda_status"):
+    assert metrics_compatible(recorded["metrics"], result["metrics"]), "Stored assessment differs: metrics"
+    for key in ("criteria_pass", "refinement_status", "release_cuda_status"):
         assert recorded[key] == result[key], "Stored assessment differs: " + key
     assert recorded["overall"] != "PASS" or result["overall"] == "PASS", "Stored PASS is unsupported"
     result.update(artifact_integrity="PASS", archive_or_directory=str(path),
+                  metric_reproduction_tolerance=dict(relative=1e-12, absolute=1e-24, scientific_thresholds_changed=False),
                   scope="Content/hash/metadata and numerical-summary audit; this reader does not itself execute CUDA")
     # Write beside the dataset so its original manifest remains immutable.
     destination = root.parent / (root.name + "_OFFLINE_AUDIT.json")
