@@ -70,10 +70,11 @@ def main():
     OUT.mkdir(parents=True,exist_ok=True)
     assert json.loads((ROOT/'data/review/FINAL_PROJECT_CHECK.json').read_text())['integrity_status']=='PASS'
     source=make_zip('Software_source.zip',source_members());latex=ROOT/'latex'
-    texts='\n'.join((latex/n).read_text(encoding='utf-8') for n in ('main.tex','candidate_verification.tex','controlled_study.tex'))
+    assert sorted(p.name for p in latex.glob('*.tex'))==['main.tex'],'Expected one manuscript TeX source'
+    texts=(latex/'main.tex').read_text(encoding='utf-8')
+    assert not re.search(r'\\(?:input|include)\b',texts),'No subsidiary TeX sources'
     figures=sorted(set(re.findall(r'\\includegraphics(?:\[[^\]]*\])?\{([^}]+)\}',texts)))
-    lm=[(latex/n,'latex/'+n) for n in ('main.tex','references.bib','candidate_verification.tex','controlled_study.tex')]
-    lm += [(latex/'build/main.bbl','latex/main.bbl')]+[(latex/'figs'/n,'latex/figs/'+n) for n in figures]
+    lm=[(latex/n,'latex/'+n) for n in ('main.tex','references.bib')]+[(latex/'figs'/n,'latex/figs/'+n) for n in figures]
     latex_source=make_zip('LaTeX_source.zip',lm)
     em=list(tree(ROOT/'data/review','data/review'))+list(tree(ROOT/'data/verification','data/verification'))
     em+=list(tree(ROOT/'data/history/pinned_sources','data/history/pinned_sources'))+[(ROOT/'data/README.md','data/README.md')]

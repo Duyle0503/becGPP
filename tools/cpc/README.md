@@ -47,6 +47,11 @@ Read gpu/GPU_ONE_CELL_README.md to distinguish their scopes.
 
 ## Audit and packaging
 
+The manuscript source layout is now one `latex/main.tex`, a separate
+`latex/references.bib`, and the image directory `latex/figs/`. Both verification
+sections are included directly in main.tex. The LaTeX source ZIP includes no
+subsidiary .tex or .bbl files; build with pdflatex, BibTeX, then pdflatex twice.
+
 Use code/tools in the portable bundle, or these matching tools/cpc copies in
 an attached checkout. Set BECGPP_CPC_ROOT if automatic location is ambiguous.
 

@@ -50,19 +50,11 @@ def read(path):
 
 def tex_sources():
     latex = ROOT / "latex"
-    pending = [latex / "main.tex"]
-    visited = set()
-    texts = []
-    while pending:
-        p = pending.pop()
-        if p in visited:
-            continue
-        visited.add(p)
-        text = p.read_text(encoding="utf-8")
-        texts.append(text)
-        for name in re.findall(r"\\input\{([^}]+)\}", text):
-            pending.append(latex / (name if name.endswith(".tex") else name + ".tex"))
-    return "\n".join(texts)
+    assert sorted(p.name for p in latex.glob('*.tex')) == ['main.tex'], 'Expected only main.tex'
+    text = (latex / 'main.tex').read_text(encoding='utf-8')
+    assert not re.search(r'\\(?:input|include)\b', text), 'Subsidiary TeX input'
+    assert sorted(p.name for p in latex.glob('*.bib')) == ['references.bib'], 'Expected references.bib'
+    return text
 
 def main():
     raw = ROOT / "data/raw/gpu_2026_10_17"
@@ -164,13 +156,16 @@ def main():
     cites = set()
     for group in re.findall(r"\\cite[a-zA-Z]*(?:\[[^\]]*\])*\{([^}]+)\}", text):
         cites.update(k.strip() for k in group.split(","))
-    bibkeys = set(re.findall(r"@\w+\s*\{\s*([^,]+),", (ROOT / "latex/references.bib").read_text(encoding="utf-8")))
+    bibliography_keys = re.findall(r'@\w+\s*\{\s*([^,]+),', (ROOT/'latex/references.bib').read_text(encoding='utf-8'))
+    assert len(bibliography_keys) == len(set(bibliography_keys)), 'Duplicate bibliography keys'
+    bibkeys = set(bibliography_keys)
     assert cites <= bibkeys, sorted(cites - bibkeys)
     log = (ROOT / "latex/build/main.log").read_text(encoding="utf-8", errors="replace")
     assert not re.search(r"Overfull \\hbox|undefined references|Citation .* undefined|Reference .* undefined|^!", log, re.M)
     assert "Output written on" in log
     assert (ROOT / "latex/main.pdf").read_bytes().startswith(b"%PDF-")
-    checks.update(figures=len(figures), labels=len(labels), cited_bibkeys=len(cites))
+    checks.update(figures=len(figures), labels=len(labels), cited_bibkeys=len(cites), manuscript_tex_files=1,
+                  bibliography_file='latex/references.bib', bibliography_entries=len(bibkeys))
     cuda = audit_cuda_retest(ROOT / "data/raw/gpu_retest_2026_10_17",
                             ROOT / "data/raw/archives/becgpp_gpu_20261017T141120Z_cwk2teki.zip",
                             review / "CUDA_RETEST_REVIEW.json")
