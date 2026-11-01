@@ -1,0 +1,2 @@
+0670c386223c8e6d253b1a0fff22825ae2535df4e4ff1bfe3048210a570226e6  dist/becgpp-1.2.2-py3-none-any.whl
+0a194f4e8c67fd3e82448dc04de0ebe221c47fdb2a8979fd7f90faf9dc56323b  dist/becgpp-1.2.2.tar.gz
