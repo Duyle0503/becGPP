@@ -1,0 +1,117 @@
+{
+  "protocol": "becgpp-trapped3d-confirm-v2",
+  "overall": "PASS",
+  "refinement_status": "PASS",
+  "release_cuda_status": "PASS",
+  "planned_jobs": 12,
+  "completed_jobs": 12,
+  "recorded_jobs": 12,
+  "pending_jobs": [],
+  "gpu_executed": true,
+  "status_counts": {
+    "PASS": 12
+  },
+  "failed_criteria": [],
+  "criteria_pass": {
+    "grid_energy": true,
+    "grid_mu": true,
+    "grid_rrms": true,
+    "grid_peak": true,
+    "h2_extrapolation": true,
+    "observed_order": true,
+    "finest_virial": true,
+    "finest_resolution": true,
+    "padding": true,
+    "box": true,
+    "seed": true,
+    "tighter_solve": true,
+    "grid_above_optimizer_change": true
+  },
+  "metrics": {
+    "grid": {
+      "energies": [
+        -3.43893991747108,
+        -3.442149103949376,
+        -3.4436425878092116,
+        -3.4444560160421975
+      ],
+      "widths": [
+        0.16666666666666666,
+        0.125,
+        0.1,
+        0.08333333333333333
+      ],
+      "observed_orders": [
+        1.9791785151036683,
+        1.9871006571007181
+      ],
+      "last_energy_change": 0.00023615579040564183,
+      "last_mu_change": 0.00018980596754560337,
+      "last_rrms_change": 0.00010978810423646886,
+      "last_peak_change": 0.0003721854514368569,
+      "h2_fit": {
+        "intercept": -3.4463007461014756,
+        "slope": 0.2657254568282564,
+        "max_fit_residual": 9.037239814269071e-07
+      },
+      "h2_energy_correction": 0.0005352783158477665
+    },
+    "padding": [
+      {
+        "N": 96,
+        "energy_change": 0.0,
+        "density_l2": 6.560940358489717e-16,
+        "identical_initial_array": true
+      },
+      {
+        "N": 128,
+        "energy_change": 1.0321207976505921e-15,
+        "density_l2": 2.5560840023012816e-15,
+        "identical_initial_array": true
+      }
+    ],
+    "box": {
+      "dx": 0.125,
+      "comparisons": [
+        {
+          "L_from": 6.0,
+          "L_to": 8.0,
+          "energy_change": 1.8810401537182043e-13,
+          "density_l2": 2.625097576646383e-07
+        },
+        {
+          "L_from": 8.0,
+          "L_to": 10.0,
+          "energy_change": 3.83432876327342e-13,
+          "density_l2": 2.9328870939629244e-07
+        },
+        {
+          "L_from": 10.0,
+          "L_to": 12.0,
+          "energy_change": 3.839489367260201e-13,
+          "density_l2": 3.595745534568061e-07
+        }
+      ],
+      "note": "Density differences use the exact common centered grid region, without renormalization or interpolation."
+    },
+    "seed": {
+      "energy_change": 6.450754985316201e-15,
+      "density_l2": 2.5733446408685347e-07,
+      "note": "Two finite starts are a sensitivity check, not a global-minimum certificate."
+    },
+    "optimizer": {
+      "tighter_residual": 8.157514858685203e-08,
+      "tighter_energy_change": 4.3990469814431527e-13,
+      "smallest_grid_increment": 0.00023615579040564183,
+      "numerical_comparison_floor": 4.3990469814431527e-13
+    }
+  },
+  "limitations": [
+    "Same-discretization checks and finite-resolution extrapolations do not certify a global minimum.",
+    "R90 is a trap-centered histogram estimate with bin width dx/8.",
+    "Box comparisons use dx=0.125, not the finest-grid spacing; boundary mass is also tested on every grid.",
+    "Chunked continuation restarts CG/BB history. Timings are diagnostics, not speedup benchmarks.",
+    "Completed cached jobs retain their original GPU/software environment; no cross-session timing comparison.",
+    "PASS is for this nonrotating beta2=100, G_C=20 trapped Newton case and its declared tolerances only."
+  ]
+}

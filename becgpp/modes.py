@@ -10,7 +10,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 
 from . import paths
-from .config import CFG_DEFAULTS, canonical_key
+from .config import CFG_DEFAULTS, canonical_key, default_cfg
 from .constants import DEV, CODE_VERSION
 from .grid import make_grid, geometry, dV, norm_of, resolve_kernel, auto_grid, resample_state
 from .interactions import long_range_phi
@@ -21,7 +21,7 @@ from .diagnostics import diagnostics
 from .solvers import ground_state, ground_state_multiseed
 from .figures import (_savefig, _imshow, save_state_figs, save_tf_comparison,
                       show_density, show_tf_density, sweep_figs)
-from .io import run_id, write_csv
+from .io import run_id, write_csv, append_csv
 
 
 # =============================================================================
@@ -126,11 +126,11 @@ def mode_validate(cfg):
     print("[TF] local flat-top: rho0=-3b2/(4b3); mu=b2 rho0+b3 rho0^2; R from int=1")
     mtf = 0.0
     for ndim in (2, 3):
-        Gf = make_grid(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=2, Omega=1.0,
+        Gf = make_grid(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=0, Omega=0.0,
                             kernel="none", beta2=-1.0, beta3=1.0, G_C=0.0,
                             L=(20.0 if ndim == 2 else 8.0), Ngrid=(192 if ndim == 2 else 96)))
         for (b2, b3) in ((-0.5, 1.0), (-1.5, 1.0)):
-            tf = extract_tf(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=2, Omega=1.0,
+            tf = extract_tf(dict(cfg, dimension=("2D" if ndim == 2 else "3D"), s=0, Omega=0.0,
                                  kernel="none", beta2=b2, beta3=b3, G_C=0.0), Gf)
             rho0_th = -3 * b2 / (4 * b3)
             mu_th = b2 * rho0_th + b3 * rho0_th**2
@@ -240,7 +240,7 @@ def mode_single(cfg):
         save_tf_comparison(psi, G, cfg, rid)
     show_density(psi, G, cfg, title=f"{cfg['dimension']} density  "
                  f"(beta2={cfg['beta2']}, G_C={cfg['G_C']}, Omega={cfg['Omega']})")
-    write_csv(os.path.join(paths.BASE, "single_summary.csv"), [diag])
+    append_csv(os.path.join(paths.BASE, "single_summary.csv"),diag)
     # reusable machine-readable record: full config + every diagnostic, one file per run.
     with open(os.path.join(paths.BASE, f"{rid}.json"), "w") as f:
         json.dump(dict(code_version=CODE_VERSION, device=DEV, cfg=cfg, diagnostics=diag),
@@ -348,7 +348,7 @@ def mode_sweep(cfg):
         print(f"\n--- {param}={val}  L={c['L']:.3g} N={c['Ngrid']} {c['dimension']} ---")
         cands = []
         if use_cont and prev is not None:
-            psi0 = prev if tuple(prev.shape) == tuple(G["R2"].shape) else resample_state(prev, G_prev, G)
+            psi0 = resample_state(prev, G_prev, G)
             if psi0 is not None:
                 psi_c, G, obs_c = ground_state(c, G=G, psi0=psi0, verbose=False)
                 cands.append(("continuation", psi_c, obs_c))
@@ -369,6 +369,9 @@ def mode_sweep(cfg):
                     candidate_E=";".join(f"{t[0]}={t[2]['E']:.10g}" for t in cands),
                     L=c["L"], N=c["Ngrid"], dimension=c["dimension"], kernel=G["kernel"])
         rows.append(diag)
+        with open(os.path.join(paths.BASE,f"{diag['rid']}.json"),'w',encoding='utf-8') as stream:
+            json.dump(dict(code_version=CODE_VERSION,device=DEV,cfg=c,diagnostics=diag),
+                      stream,indent=2,default=str)
         prev, G_prev = psi.detach(), G
         if cfg.get("save_ckpt", True):
             torch.save(dict(psi=psi.cpu(), cfg=c, obs=diag),
@@ -405,7 +408,7 @@ def mode_convergence(cfg):
     print(f"CONVERGENCE  {cfg['dimension']} s={cfg['s']} Omega={cfg['Omega']} "
           f"beta2={cfg['beta2']} beta3={cfg['beta3']} G_C={cfg['G_C']}")
     seen = set()
-    prev = None
+    prev, G_prev = None, None
     for axis, L, N, pad in variants:
         key = (round(L, 10), N, pad)
         if key in seen:
@@ -413,14 +416,14 @@ def mode_convergence(cfg):
         seen.add(key)
         c = dict(cfg, L=float(L), Ngrid=int(N), pad=int(pad), tag=f"{cfg.get('tag', 'becgpp')}_{axis}_N{N}_p{pad}")
         G = make_grid(c)
-        psi0 = prev if (prev is not None and tuple(prev.shape) == tuple(G["R2"].shape)) else None
+        psi0 = resample_state(prev,G_prev,G) if prev is not None else None
         psi, G, obs = ground_state(c, G=G, psi0=psi0, verbose=False)
         d = diagnostics(psi, G, c)
         d.update(axis=axis, L=L, N=N, pad=pad, dx=G["dx"], resid_rel=obs["resid_rel"],
                  iters=obs["iters"], converged=obs["converged"], points_per_R90=d["R90"] / G["dx"])
         rows.append(d)
         if axis == "grid" and N == max(cfg.get("conv_Ngrids", [256])):
-            prev = psi.detach()
+            prev, G_prev = psi.detach(), G
         write_csv(os.path.join(paths.BASE, "convergence.csv"), rows)
         print(f"    {axis} L={L:.4g} N={N} p={pad}: E={d['E']:.9g} R90={d['R90']:.6g} "
               f"vir={d['virial_rel']:.2e} ppR90={d['points_per_R90']:.1f} res={d['resid_rel']:.2e}")
@@ -472,6 +475,7 @@ DISPATCH = dict(validate=mode_validate, smoke=mode_smoke, single=mode_single,
 
 def run(cfg):
     """Dispatch a configuration to its mode and return the result."""
+    cfg = default_cfg(**cfg)
     mode = cfg.get("mode", "smoke")
     fn = DISPATCH.get(mode)
     if fn is None:

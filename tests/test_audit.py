@@ -44,11 +44,12 @@ def _dv(G):
 
 
 def _random_state(G, seed=1):
-    g = torch.Generator().manual_seed(seed)
+    device = G["R2"].device
+    g = torch.Generator(device=device).manual_seed(seed)
     env = torch.exp(-0.5 * G["R2"])
     sh = G["R2"].shape
-    re = env * (1.0 + 0.3 * torch.randn(sh, generator=g))
-    im = 0.3 * env * torch.randn(sh, generator=g)
+    re = env * (1.0 + 0.3 * torch.randn(sh, generator=g, device=device))
+    im = 0.3 * env * torch.randn(sh, generator=g, device=device)
     return (re + 1j * im).to(torch.complex128), g
 
 
@@ -73,8 +74,8 @@ def test_energy_gradient_matches_hamiltonian(kw):
     G = make_grid(c)
     psi, g = _random_state(G)
     env = torch.exp(-0.5 * G["R2"])
-    v = (env * torch.randn(G["R2"].shape, generator=g)
-         + 1j * env * torch.randn(G["R2"].shape, generator=g)).to(torch.complex128)
+    v = (env * torch.randn(G["R2"].shape, generator=g, device=env.device)
+         + 1j * env * torch.randn(G["R2"].shape, generator=g, device=env.device)).to(torch.complex128)
 
     def E(p):
         return energy_components(p, G, c["beta2"], c["beta3"], c["Omega"], c["G_C"])["E"].item()
@@ -88,9 +89,10 @@ def test_energy_gradient_matches_hamiltonian(kw):
 @pytest.mark.parametrize("kw", _PHYSICS[1:5])
 def test_kernel_convolution_is_symmetric(kw):
     G = make_grid(_cfg(**kw))
-    g = torch.Generator().manual_seed(2)
-    a = torch.rand(G["R2"].shape, generator=g, dtype=torch.float64)
-    b = torch.rand(G["R2"].shape, generator=g, dtype=torch.float64)
+    device = G["R2"].device
+    g = torch.Generator(device=device).manual_seed(2)
+    a = torch.rand(G["R2"].shape, generator=g, dtype=torch.float64, device=device)
+    b = torch.rand(G["R2"].shape, generator=g, dtype=torch.float64, device=device)
     lhs = (a * kernel_convolution(b, G)).sum().item()
     rhs = (kernel_convolution(a, G) * b).sum().item()
     assert abs(lhs - rhs) <= 1e-12 * abs(lhs)

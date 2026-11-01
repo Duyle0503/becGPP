@@ -5,6 +5,7 @@ import torch
 import torch.nn.functional as F
 
 from .constants import DEV
+from .config import default_cfg
 
 
 def geometry(cfg):
@@ -67,12 +68,13 @@ def _memory_estimate_gb(ndim, N, pad, kernel):
 
 
 def make_grid(cfg):
+    cfg = default_cfg(**cfg)
     ndim, quasi = geometry(cfg)
     L, N, s = float(cfg["L"]), int(cfg["Ngrid"]), float(cfg["s"])
     kkind, kexp = resolve_kernel(cfg)
     dx = 2.0 * L / N
-    x = (torch.arange(N, device=DEV, dtype=torch.get_default_dtype()) - N // 2) * dx
-    k1 = 2 * math.pi * torch.fft.fftfreq(N, d=dx).to(DEV)
+    x = (torch.arange(N, device=DEV, dtype=torch.float64) - N // 2) * dx
+    k1 = 2 * math.pi * torch.fft.fftfreq(N, d=dx, dtype=torch.float64).to(DEV)
     if ndim == 2:
         X, Y = torch.meshgrid(x, x, indexing="ij")
         coords = (X, Y)
@@ -142,6 +144,8 @@ def resample_state(psi_old, G_old, G_new):
     for gamma-continuation across box sizes. Renormalized on the new grid; returns
     None if the interpolation is degenerate."""
     d = G_old["ndim"]
+    if d != G_new['ndim']:
+        raise ValueError('cannot resample between different dimensions')
     n_old, dx_old = int(G_old["N"]), float(G_old["dx"])
     x0 = -(n_old // 2) * dx_old                    # first/last node, as in make_grid
     x1 = x0 + (n_old - 1) * dx_old                 # (x0 = -L only for even N)

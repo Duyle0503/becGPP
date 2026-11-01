@@ -49,7 +49,9 @@ def radial_average(field, G, bins=None, rmax=None, center=None):
     prof = np.full(bins, np.nan)
     rf = r.ravel()
     ff = f.ravel()
-    idx = np.clip(np.digitize(rf, edges) - 1, 0, bins - 1)
+    inside = (rf >= 0.0) & (rf <= rmax)
+    rf, ff = rf[inside], ff[inside]
+    idx = np.minimum(np.digitize(rf, edges) - 1, bins - 1)
     for i in range(bins):
         m = idx == i
         if np.any(m):

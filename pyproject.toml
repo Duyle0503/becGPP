@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "becgpp"
-version = "1.2.1"
+version = "1.2.2"
 description = "A GPU-accelerated spectral ground-state solver for trapped, rotating and self-gravitating Bose-Einstein condensates in 2D, 3D and quasi-2D."
 readme = "README.md"
 license = { text = "MIT" }
@@ -32,7 +32,7 @@ dependencies = [
 
 [project.optional-dependencies]
 yaml = ["PyYAML>=5.4"]
-test = ["pytest>=7.0"]
+test = ["pytest>=7.0", "scipy>=1.8"]
 
 [project.urls]
 Homepage = "https://github.com/Duyle0503/becGPP"

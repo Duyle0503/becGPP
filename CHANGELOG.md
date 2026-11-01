@@ -1,3 +1,61 @@
+# 1.2.2 (2026-10-18)
+
+Release described in the Computer Physics Communications article. The discrete
+energy functional, kernels and diagnostics are those of 1.2.2rc1; the solver
+differs only in the recentring of translation-invariant states (below).
+
+- `default_cfg` warns (`RuntimeWarning`) when rotation leaves the energy
+  unbounded below: `Omega != 0` with `s < 2`, or `s = 2` with
+  `Omega**2 > 2*trap_coeff` (`tests/test_regime_warning.py`).
+- Translation-invariant problems (no trap, no rotation, no long-range term):
+  the converged state is shifted by whole grid cells so that its periodic
+  centre of mass sits at the box centre (`recentred_shift` in the output).
+  This is an exact symmetry of the discrete energy; it removes drift along the
+  translation mode that could carry a free droplet across the periodic
+  boundary and spoil radii and figures (`tests/test_recentre.py`). Found by
+  the CPU reference run. Trapped and long-range runs are unaffected.
+- `examples/cpu_test_run.py`: a reference test run on a CPU (a few minutes) that
+  exercises the validation gate and seven small configurations covering every
+  kernel, 2D/3D/quasi-2D, rotation and the cubic-quintic terms; `--check`
+  compares with the shipped reference.
+- `data/sample_output/` regenerated with this version from that test run
+  (CSV, per-run JSON, figures and `expected_results.json`); the version-1.0
+  scan files were removed (they remain in the git history).
+- README: install from the archive or the release tag, regime of validity,
+  complete package layout.
+
+# 1.2.2rc1 — release candidate (2026-10-15)
+
+CUDA review follow-up (2026-10-17): make random-state and direct-quadrature
+test fixtures device-aware so the full 97-test suite can be selected on CUDA.
+Numerical solver modules are unchanged. The supplied CUDA run exposed fixture
+errors. A separate Tesla T4 rerun at commit 75f0a30 subsequently passed all 97
+tests in 29.52 seconds, with no errors, skips or excluded cases (reviewed
+2026-10-18). The original physics batch and review flags are retained.
+
+CPC tooling follow-up (2026-10-18): publish the one-cell GPU runners and bundle
+audit/packaging helpers under tools/cpc, with workspace discovery for the separate
+code/data/latex bundle. Numerical modules and test assertions are unchanged.
+
+- Recover failed conjugate-gradient searches with a fresh descent direction and
+  complete backtracking; clear stale BB/CG history. Stalls are not labelled as
+  proof of rounding. Enforce complex128 and validate initial states.
+- Resample continuation in physical coordinates even when array shapes match.
+- Exclude radii outside rmax from radial bins.
+- Use coexistence for trapped cubic–quintic TF, reporting finite-grid mass error.
+- Deep-copy configuration lists; validate keys, finite values and integer counts
+  at public entry points; explicitly construct float64 grids.
+- Stabilize the thin-disc virial kernel with a large-argument expansion.
+- Append single-run CSV records, write sweep JSON provenance and sum multi-seed time.
+- Include examples, benchmarks and documentation in source distributions; pin
+  historical benchmark commits and correct regenerated LLL parameters.
+- Add independent direct-convolution, nonlinear, provenance and numerical regressions.
+- Warn (`RuntimeWarning`) when rotation leaves the energy unbounded below:
+  `Omega != 0` with `s < 2`, or `s = 2` with `Omega**2 > 2*trap_coeff`
+  (`tests/test_regime_warning.py`). Numerical modules are unchanged.
+
+Historical production CSVs retain their original version labels and values.
+
 # Changelog
 
 ## 1.2.1 (2026-10-03)

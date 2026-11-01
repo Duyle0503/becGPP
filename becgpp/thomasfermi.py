@@ -39,7 +39,12 @@ def _invert_local(mu, Veff, b2, b3):
     if b3 > 1e-30:
         disc = b2 * b2 + 4.0 * b3 * rhs
         root = (-b2 + torch.sqrt(torch.clamp(disc, min=0.0))) / (2.0 * b3)
-        return torch.where(disc > 0.0, torch.clamp(root, min=0.0), torch.zeros_like(rhs))
+        occupied = disc > 0.0
+        if b2 < 0:
+            # Select the lower grand-potential phase, not the metastable liquid
+            # between its spinodal and the zero-pressure coexistence point.
+            occupied = occupied & (rhs >= -3.0 * b2 * b2 / (16.0 * b3))
+        return torch.where(occupied, torch.clamp(root, min=0.0), torch.zeros_like(rhs))
     if abs(b2) > 1e-30:
         return torch.clamp(rhs / b2, min=0.0)
     return torch.zeros_like(rhs)
@@ -75,7 +80,7 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
     key = ("tf", G["kernel"], round(b2, 10), round(b3, 10), round(gc, 10),
            round(float(cfg["Omega"]), 10), int(G["N"]), round(float(G["L"]), 10),
            int(G["ndim"]), round(float(G["s"]), 10), round(float(G.get("trap_coeff", 0.5)), 10),
-           round(float(G.get("l_z", 0.0)), 10), int(G["pad"]))
+           round(float(G.get("l_z", 0.0)), 10), int(G["pad"]),int(iters),float(relax))
     if cfg.get("tf_cache", True) and key in _TF_CACHE:
         return _TF_CACHE[key]
     tf = None
@@ -96,7 +101,8 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
             phi = long_range_phi(n, G, gc)
             base = Veff + phi
             f = lambda mu: _invert_local(mu, base, b2, b3)
-            mu = _bisect_mu_for_norm(f, G, base.min().item(),
+            phase_mu = -3.0 * b2*b2/(16.0*b3) if b2 < 0 and b3 > 0 else 0.0
+            mu = _bisect_mu_for_norm(f, G, base.min().item() + phase_mu - 1.0,
                                      base.max().item() + abs(b2) + abs(b3) + 1.0)
             if not math.isfinite(mu):
                 break               # degenerate -> abort TF
@@ -104,30 +110,35 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
             ssum = (n_new.sum() * dv).item()
             if ssum <= 0:
                 break
-            n_new = n_new / ssum
+            discontinuous = b2 < 0 and b3 > 0
+            if not discontinuous:
+                n_new = n_new / ssum
             dn = (n_new - n).abs().sum().item() * dv
             n = (1 - relax) * n + relax * n_new
-            n = n / (n.sum() * dv)
-            if dn < 1e-9:
+            if not discontinuous:
+                n = n / (n.sum() * dv)
+            mass_error = abs((n.sum()*dv).item()-1.0)
+            if dn < 1e-9 and mass_error < 1e-7:
                 conv = True
                 break
         if math.isfinite(mu):
             R90, R99 = mass_quantiles(n, G, (0.90, 0.99))
             tf = dict(kind="nonlocal_compressed", n=n, R90=R90, R99=R99, mu=mu,
-                      rho0=float("nan"), converged=conv, final_dn=dn)
+                      rho0=float("nan"), converged=conv, final_dn=dn,
+                      mass_error=abs((n.sum()*dv).item()-1.0))
         else:
             tf = None
 
     else:
         confined = bool(torch.max(Veff).item() > 1e-12)
-        if b2 < 0 and b3 > 0:
+        if b2 < 0 and b3 > 0 and (Veff.max()-Veff.min()).item() <= 1e-12:
             # Self-bound droplet: attractive cubic + repulsive quintic. The TF
             # reference is the zero-pressure flat top rho0 = -3 b2/(4 b3), radius
-            # set by int n = 1. A weak residual trap (Omega<1) only compresses the
-            # edge, so flat-top is the correct leading-order reference at any Omega
-            # -- NOT the inverted profile (which cannot even be normalized here).
+            # set by int n = 1. Exact zero-pressure construction requires a
+            # spatially constant effective potential; trapped droplets use the
+            # liquid/vacuum coexistence construction below.
             rho0 = -3.0 * b2 / (4.0 * b3)
-            mu = b2 * rho0 + b3 * rho0**2
+            mu = b2 * rho0 + b3 * rho0**2 + Veff.min().item()
             R = 1.0 / math.sqrt(math.pi * rho0) if G["ndim"] == 2 \
                 else (3.0 / (4.0 * math.pi * rho0))**(1.0 / 3.0)
             rr = torch.sqrt(G["R2"])
@@ -136,6 +147,22 @@ def extract_tf(cfg, G, iters=400, relax=0.4):
             R90, R99 = mass_quantiles(n, G, (0.90, 0.99))
             tf = dict(kind="local_flattop", n=n, R90=R90, R99=R99, mu=mu,
                       rho0=rho0, R=R, converged=True, final_dn=0.0)
+        elif confined and b2 < 0 and b3 > 0:
+            coexist = -3.0*b2*b2/(16.0*b3)
+            f = lambda mu: _invert_local(mu, Veff, b2, b3)
+            mu = _bisect_mu_for_norm(f, G, Veff.min().item()+coexist-1.0,
+                                     Veff.max().item()+abs(b2)+b3+1.0)
+            n = f(mu)
+            mass = (n.sum()*dv).item()
+            # At coexistence the density jumps. A finite collocation grid can
+            # bracket mass 1 without representing it exactly. Keep the physical
+            # root (renormalizing would violate its Euler equation) and report
+            # that mass error explicitly rather than claiming convergence.
+            mass_error = abs(mass-1.0)
+            R90,R99 = mass_quantiles(n,G,(.9,.99))
+            tf = dict(kind='local_trapped_cubicquintic',n=n,R90=R90,R99=R99,
+                      mu=mu,rho0=float('nan'),converged=mass_error<1e-7,
+                      final_dn=mass_error,mass_error=mass_error)
         elif confined and (b2 > 0 or (b2 == 0 and b3 > 0)):
             # Repulsive trapped gas: inverted-profile TF (parabola if b3=0,
             # pure quintic sqrt((mu-V)/b3) if b2=0).

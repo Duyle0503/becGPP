@@ -1,0 +1,16 @@
+{
+  "N": 192,
+  "L": 8.0,
+  "mass": 0.9999999999999994,
+  "Ekin": 0.741905895842689,
+  "Etrap": 0.8013049585737705,
+  "Econtact": 2.551381727317456,
+  "full_newton": false,
+  "seconds": 0.8955806000158191,
+  "component_absolute_errors": {
+    "Ekin": 5.551115123125783e-16,
+    "Etrap": 2.220446049250313e-16,
+    "Econtact": 0.0
+  },
+  "scope": "Independent NumPy/SciPy discrete-state evaluation; no becgpp imported, no optimization performed"
+}

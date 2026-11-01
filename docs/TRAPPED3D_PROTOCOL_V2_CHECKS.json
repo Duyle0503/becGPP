@@ -1,0 +1,10 @@
+{
+  "scope": "Local harness checks and N=12 CPU worker checkpoint roundtrip; NOT CUDA/refinement paper evidence",
+  "tests_run": 32,
+  "failures": 0,
+  "errors": 0,
+  "seconds": 55.76599999994505,
+  "gpu_executed": false,
+  "numerical_release_unchanged": true,
+  "protocol_fingerprint": "5d8306c9b9eb7cba8bf6458c61aab5aab273191f56372d7176dbf6f1ef2d5b2a"
+}
